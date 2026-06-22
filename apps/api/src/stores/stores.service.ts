@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStoreDto } from './dto/create-store.dto';
@@ -63,6 +64,50 @@ export class StoresService {
     });
     if (!store) throw new NotFoundException('Store not found for this user');
     return store;
+  }
+
+  async verifyCode(merchantUserId: string, code: string) {
+    const store = await this.prisma.store.findUnique({ where: { userId: merchantUserId } });
+    if (!store) throw new NotFoundException('Store not found');
+
+    const promoCode = await this.prisma.promoCode.findUnique({
+      where: { code },
+      include: {
+        campaign: { include: { store: true } },
+        user: { select: { id: true, name: true, firstName: true, lastName: true, email: true, phone: true } },
+      },
+    });
+    if (!promoCode) throw new NotFoundException('Promo code not found');
+    if (promoCode.campaign.storeId !== store.id) throw new ForbiddenException('This code belongs to a different store');
+    if (promoCode.status === 'REDEEMED' || promoCode.status === 'CONVERTED') throw new BadRequestException('Code already used');
+    if (promoCode.expiresAt && promoCode.expiresAt < new Date()) throw new BadRequestException('Code expired');
+
+    const updated = await this.prisma.promoCode.update({
+      where: { code },
+      data: { status: 'REDEEMED', usedAt: new Date() },
+    });
+
+    // Charge CPA if tariff is CPA
+    if (store.tariff === 'CPA' && store.balance > 0) {
+      const cpaAmount = Math.min(store.balance, promoCode.campaign.discountValue);
+      await this.prisma.store.update({
+        where: { id: store.id },
+        data: { balance: { decrement: cpaAmount } },
+      });
+    }
+
+    return {
+      success: true,
+      code: updated.code,
+      status: updated.status,
+      campaign: {
+        title: promoCode.campaign.title,
+        discountType: promoCode.campaign.discountType,
+        discountValue: promoCode.campaign.discountValue,
+      },
+      customer: promoCode.user,
+      usedAt: updated.usedAt,
+    };
   }
 
   async update(id: string, userId: string, userRole: string, dto: UpdateStoreDto) {

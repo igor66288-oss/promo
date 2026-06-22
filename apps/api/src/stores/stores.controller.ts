@@ -7,6 +7,7 @@ import {
   Param,
   UseGuards,
   Request,
+  HttpCode,
 } from '@nestjs/common';
 import { StoresService } from './stores.service';
 import { CreateStoreDto } from './dto/create-store.dto';
@@ -48,5 +49,13 @@ export class StoresController {
   @Roles(Role.MERCHANT, Role.ADMIN)
   update(@Param('id') id: string, @Request() req: any, @Body() dto: UpdateStoreDto) {
     return this.storesService.update(id, req.user.id, req.user.role, dto);
+  }
+
+  @Post('verify-code')
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.MERCHANT, Role.ADMIN)
+  verifyCode(@Request() req: any, @Body('code') code: string) {
+    return this.storesService.verifyCode(req.user.id, code);
   }
 }

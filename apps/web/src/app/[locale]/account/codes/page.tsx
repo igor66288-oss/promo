@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/api';
 import { copyToClipboard } from '@/lib/clipboard';
+import QRCode from 'qrcode';
 
 interface PromoCode {
   id: string;
@@ -35,6 +36,74 @@ const STATUS_COLOR: Record<string, string> = {
   CONVERTED: '#8B5CF6',
 };
 
+function QRModal({ code, onClose, locale }: { code: PromoCode; onClose: () => void; locale: string }) {
+  const [qrUrl, setQrUrl] = useState('');
+
+  useEffect(() => {
+    QRCode.toDataURL(code.code, {
+      width: 240,
+      margin: 2,
+      color: { dark: '#0f172a', light: '#f8fafc' },
+    }).then(setQrUrl);
+  }, [code.code]);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#0f172a', border: '1px solid rgba(6,182,212,0.3)',
+          borderRadius: 24, padding: 28, textAlign: 'center', maxWidth: 320, width: '100%',
+        }}
+      >
+        <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 800 }}>
+          {locale === 'th' ? 'แสดง QR ให้แคชเชียร์สแกน' : 'Show QR to cashier'}
+        </h2>
+        <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>
+          {code.campaign.store.name} · {code.campaign.title}
+        </p>
+
+        {qrUrl && (
+          <div style={{ display: 'inline-block', background: '#f8fafc', borderRadius: 16, padding: 12, marginBottom: 16 }}>
+            <img src={qrUrl} alt="QR Code" style={{ width: 200, height: 200, display: 'block' }} />
+          </div>
+        )}
+
+        <div style={{
+          background: 'rgba(6,182,212,0.1)', border: '1px dashed rgba(6,182,212,0.3)',
+          borderRadius: 10, padding: '10px 16px', marginBottom: 20,
+        }}>
+          <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: '0.12em', color: '#06B6D4', fontFamily: 'monospace' }}>
+            {code.code}
+          </span>
+        </div>
+
+        <div style={{ fontSize: 20, fontWeight: 800, color: '#FBBF24', marginBottom: 20 }}>
+          {discountLabel(code.campaign.discountType, code.campaign.discountValue)}
+        </div>
+
+        <button
+          onClick={onClose}
+          style={{
+            width: '100%', padding: '12px', background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10,
+            color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+          }}
+        >
+          {locale === 'th' ? 'ปิด' : 'Close'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function MyCodesPage() {
   const router = useRouter();
   const params = useParams();
@@ -43,6 +112,7 @@ export default function MyCodesPage() {
   const [tab, setTab] = useState<'active' | 'used'>('active');
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
+  const [qrCode, setQrCode] = useState<PromoCode | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
@@ -61,11 +131,12 @@ export default function MyCodesPage() {
 
   const active = codes.filter(c => !['REDEEMED', 'CONVERTED'].includes(c.status) && (!c.expiresAt || new Date(c.expiresAt) > new Date()));
   const used = codes.filter(c => ['REDEEMED', 'CONVERTED'].includes(c.status));
-
   const displayCodes = tab === 'active' ? active : used;
 
   return (
     <div style={{ minHeight: '100vh', background: '#030712', color: 'white', fontFamily: 'sans-serif' }}>
+      {qrCode && <QRModal code={qrCode} onClose={() => setQrCode(null)} locale={locale} />}
+
       {/* Header */}
       <div style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
         <button onClick={() => router.push(`/${locale}/account`)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 20, padding: 0 }}>←</button>
@@ -106,6 +177,7 @@ export default function MyCodesPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {displayCodes.map(c => {
               const expired = c.expiresAt && new Date(c.expiresAt) < new Date();
+              const isActive = !['REDEEMED', 'CONVERTED'].includes(c.status) && !expired;
               return (
                 <div key={c.id} style={{
                   background: expired ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)',
@@ -127,22 +199,38 @@ export default function MyCodesPage() {
                     </div>
                   </div>
 
-                  {/* Code */}
+                  {/* Code + actions */}
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <div style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.15)', borderRadius: 8, padding: '8px 12px' }}>
-                      <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '0.1em', color: '#67E8F9', fontFamily: 'monospace' }}>{c.code}</span>
+                      <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: '0.1em', color: '#67E8F9', fontFamily: 'monospace' }}>{c.code}</span>
                     </div>
-                    {!['REDEEMED', 'CONVERTED'].includes(c.status) && !expired && (
-                      <button onClick={() => copy(c.code)} style={{
-                        padding: '8px 14px', background: copied === c.code ? 'rgba(16,185,129,0.3)' : 'rgba(6,182,212,0.2)',
-                        border: `1px solid ${copied === c.code ? '#10B981' : '#06B6D4'}`,
-                        borderRadius: 8, color: copied === c.code ? '#10B981' : '#67E8F9',
-                        fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
-                      }}>
-                        {copied === c.code ? '✓ Copied' : 'Copy'}
-                      </button>
+                    {isActive && (
+                      <>
+                        <button onClick={() => copy(c.code)} style={{
+                          padding: '8px 10px', background: copied === c.code ? 'rgba(16,185,129,0.3)' : 'rgba(6,182,212,0.15)',
+                          border: `1px solid ${copied === c.code ? '#10B981' : '#06B6D4'}`,
+                          borderRadius: 8, color: copied === c.code ? '#10B981' : '#67E8F9',
+                          fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+                        }}>
+                          {copied === c.code ? '✓' : 'Copy'}
+                        </button>
+                        <button onClick={() => setQrCode(c)} style={{
+                          padding: '8px 10px', background: 'rgba(139,92,246,0.15)',
+                          border: '1px solid rgba(139,92,246,0.4)',
+                          borderRadius: 8, color: '#a78bfa',
+                          fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+                        }}>
+                          QR
+                        </button>
+                      </>
                     )}
                   </div>
+
+                  {isActive && (
+                    <p style={{ margin: '10px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>
+                      {locale === 'th' ? '📱 กดปุ่ม QR แล้วให้แคชเชียร์สแกน' : '📱 Tap QR and show cashier to scan'}
+                    </p>
+                  )}
 
                   <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
                     <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>

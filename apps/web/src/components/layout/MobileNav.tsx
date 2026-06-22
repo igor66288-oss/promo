@@ -33,9 +33,9 @@ export function MobileNav() {
   const merchantItems = [
     { href: `/${locale}/dashboard`, icon: '▦', label: th ? 'หน้าแรก' : 'Home' },
     { href: `/${locale}/dashboard/campaigns`, icon: '◈', label: th ? 'แคมเปญ' : 'Campaigns' },
+    { href: `/${locale}/dashboard/scan`, icon: '◫', label: th ? 'สแกน' : 'Scan' },
     { href: `/${locale}/dashboard/analytics`, icon: '◉', label: th ? 'สถิติ' : 'Stats' },
     { href: `/${locale}/dashboard/billing`, icon: '◎', label: th ? 'บิล' : 'Billing' },
-    { href: `/${locale}`, icon: '⊕', label: th ? 'ดีล' : 'Deals' },
   ];
 
   const customerItems = [
