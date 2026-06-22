@@ -1,4 +1,4 @@
-import { PrismaClient, Role, StoreStatus, Tariff, DiscountType, CampaignStatus, PromoStatus } from '@prisma/client';
+import { PrismaClient, Role, StoreStatus, Tariff, DiscountType, CampaignStatus, PromoStatus, SpinStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -8,12 +8,14 @@ async function main() {
 
   // Clean existing data
   await prisma.event.deleteMany();
+  await prisma.partnerSpin.deleteMany();
   await prisma.promoCode.deleteMany();
   await prisma.rouletteConfig.deleteMany();
   await prisma.campaign.deleteMany();
   await prisma.invoice.deleteMany();
   await prisma.store.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.partnerConfig.deleteMany();
 
   // Admin user
   const adminPassword = await bcrypt.hash('Admin123!', 10);
@@ -72,6 +74,7 @@ async function main() {
       status: CampaignStatus.ACTIVE,
       promoted: true,
       promotedUntil: nextMonth,
+      inPartnerRoulette: true,
     },
   });
   console.log(`Created campaign: ${campaign1.title}`);
@@ -91,6 +94,7 @@ async function main() {
       perUserLimit: 1,
       status: CampaignStatus.ACTIVE,
       promoted: false,
+      inPartnerRoulette: true,
     },
   });
   console.log(`Created campaign: ${campaign2.title}`);
@@ -144,10 +148,42 @@ async function main() {
   ]);
 
   console.log(`Created ${promoCodes.length} promo codes`);
+
+  // Partner: Grab
+  const grabPartner = await prisma.partnerConfig.create({
+    data: {
+      name: 'Grab',
+      slug: 'grab',
+      secretKey: 'grab-demo-secret-key-2026',
+      active: true,
+    },
+  });
+  console.log(`Created partner: ${grabPartner.name} (key: ${grabPartner.secretKey})`);
+
+  // Demo partner spin (already completed)
+  await prisma.partnerSpin.create({
+    data: {
+      partnerId: grabPartner.id,
+      customerRef: 'grab-user-demo-001',
+      transactionId: 'grab-txn-demo-001',
+      campaignId: campaign1.id,
+      promoCodeId: promoCodes[1].id,
+      sectors: [
+        { campaignId: campaign1.id, title: campaign1.title, storeName: store.name, discountType: campaign1.discountType, discountValue: campaign1.discountValue },
+        { campaignId: campaign2.id, title: campaign2.title, storeName: store.name, discountType: campaign2.discountType, discountValue: campaign2.discountValue },
+      ],
+      winnerIndex: 0,
+      status: SpinStatus.COMPLETED,
+      expiresAt: new Date(now.getTime() + 24 * 60 * 60 * 1000),
+    },
+  });
+  console.log('Created demo partner spin');
+
   console.log('\nSeed completed successfully!');
   console.log('\nCredentials:');
   console.log('  Admin:    admin@promo.th / Admin123!');
   console.log('  Merchant: merchant@demo.th / Demo123!');
+  console.log('  Partner key (Grab): grab-demo-secret-key-2026');
 }
 
 main()

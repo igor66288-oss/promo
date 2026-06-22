@@ -54,4 +54,8 @@ export class UpdateCampaignDto {
   @IsBoolean()
   @IsOptional()
   promoted?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  inPartnerRoulette?: boolean;
 }

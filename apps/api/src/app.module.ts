@@ -10,6 +10,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { RouletteModule } from './roulette/roulette.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { BillingModule } from './billing/billing.module';
+import { PartnerModule } from './partner/partner.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { BillingModule } from './billing/billing.module';
     RouletteModule,
     AnalyticsModule,
     BillingModule,
+    PartnerModule,
   ],
 })
 export class AppModule {}

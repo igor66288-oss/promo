@@ -19,6 +19,7 @@ interface Campaign {
   endsAt: string;
   promoted: boolean;
   promotedUntil?: string | null;
+  inPartnerRoulette: boolean;
   _count?: { promoCodes: number };
 }
 
@@ -430,6 +431,25 @@ export default function CampaignsPage() {
 
                         {/* Bottom row: action buttons */}
                         <div className="flex items-center gap-2 flex-wrap">
+                          {/* Partner Roulette toggle */}
+                          <button
+                            onClick={async () => {
+                              await api.patch(`/campaigns/${campaign.id}`, { inPartnerRoulette: !campaign.inPartnerRoulette });
+                              await loadCampaigns();
+                            }}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '4px',
+                              padding: '5px 10px',
+                              background: campaign.inPartnerRoulette ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.06)',
+                              border: `1px solid ${campaign.inPartnerRoulette ? 'rgba(139,92,246,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                              borderRadius: '8px',
+                              color: campaign.inPartnerRoulette ? '#a78bfa' : 'rgba(255,255,255,0.4)',
+                              fontSize: '12px', fontWeight: '600', cursor: 'pointer',
+                            }}
+                          >
+                            🎡 {locale === 'th' ? (campaign.inPartnerRoulette ? 'ในรูเล็ต' : 'รูเล็ต') : (campaign.inPartnerRoulette ? 'In Roulette' : 'Roulette')}
+                          </button>
+
                           {canPromote && (
                             <button
                               onClick={() =>

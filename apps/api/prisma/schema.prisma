@@ -76,9 +76,11 @@ model Campaign {
   promotedUntil DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
-  promoCodes    PromoCode[]
-  roulette      RouletteConfig?
-  events        Event[]
+  promoCodes        PromoCode[]
+  roulette          RouletteConfig?
+  events            Event[]
+  inPartnerRoulette Boolean        @default(false)
+  partnerSpins      PartnerSpin[]
 }
 
 enum DiscountType {
@@ -101,11 +103,12 @@ model PromoCode {
   campaign   Campaign    @relation(fields: [campaignId], references: [id])
   userId     String?
   user       User?       @relation(fields: [userId], references: [id])
-  status     PromoStatus @default(CREATED)
-  expiresAt  DateTime?
-  usedAt     DateTime?
-  createdAt  DateTime    @default(now())
-  events     Event[]
+  status      PromoStatus  @default(CREATED)
+  expiresAt   DateTime?
+  usedAt      DateTime?
+  createdAt   DateTime     @default(now())
+  events      Event[]
+  partnerSpin PartnerSpin?
 }
 
 enum PromoStatus {
@@ -137,6 +140,39 @@ enum EventType {
   REDEMPTION
   CONVERSION
   ROULETTE_SPIN
+}
+
+model PartnerConfig {
+  id        String        @id @default(cuid())
+  name      String
+  slug      String        @unique
+  secretKey String        @unique @default(cuid())
+  active    Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  spins     PartnerSpin[]
+}
+
+enum SpinStatus {
+  COMPLETED
+  EXPIRED
+  NO_CAMPAIGNS
+}
+
+model PartnerSpin {
+  id            String        @id @default(cuid())
+  partnerId     String
+  partner       PartnerConfig @relation(fields: [partnerId], references: [id])
+  customerRef   String
+  transactionId String        @unique
+  promoCodeId   String?       @unique
+  promoCode     PromoCode?    @relation(fields: [promoCodeId], references: [id])
+  campaignId    String?
+  campaign      Campaign?     @relation(fields: [campaignId], references: [id])
+  sectors       Json
+  winnerIndex   Int           @default(0)
+  status        SpinStatus    @default(COMPLETED)
+  createdAt     DateTime      @default(now())
+  expiresAt     DateTime
 }
 
 model RouletteConfig {

@@ -40,6 +40,7 @@ services:
       OMISE_PUBLIC_KEY: ${OMISE_PUBLIC_KEY}
       OMISE_SECRET_KEY: ${OMISE_SECRET_KEY}
       PORT: 3001
+      WEB_URL: ${WEB_URL:-http://5.223.88.83}
     depends_on:
       postgres:
         condition: service_healthy
