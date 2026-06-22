@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { copyToClipboard } from '@/lib/clipboard';
 
 interface Sector {
   label: string;
@@ -120,7 +121,7 @@ export default function RouletteWheel({ sectors, campaignId, onSpin }: Props) {
 
   const copy = () => {
     if (result?.promoCode?.code) {
-      navigator.clipboard.writeText(result.promoCode.code);
+      copyToClipboard(result.promoCode.code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }

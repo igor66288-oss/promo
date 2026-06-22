@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import Sidebar from '@/components/layout/Sidebar';
+import { copyToClipboard } from '@/lib/clipboard';
 
 export default function IntegrationPage() {
   const [apiKey, setApiKey] = useState('');
@@ -20,7 +21,7 @@ export default function IntegrationPage() {
   }, []);
 
   const copy = (text: string, key: string) => {
-    navigator.clipboard.writeText(text);
+    copyToClipboard(text);
     setCopied(key);
     setTimeout(() => setCopied(null), 2000);
   };

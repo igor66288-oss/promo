@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import api from '@/lib/api';
+import { copyToClipboard } from '@/lib/clipboard';
 
 interface PromoCode {
   id: string;
@@ -53,7 +54,7 @@ export default function MyCodesPage() {
   }, []);
 
   const copy = (code: string) => {
-    navigator.clipboard.writeText(code);
+    copyToClipboard(code);
     setCopied(code);
     setTimeout(() => setCopied(null), 2000);
   };

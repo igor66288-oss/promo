@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { copyToClipboard } from '@/lib/clipboard';
 
 interface Sector {
   campaignId: string;
@@ -202,7 +203,7 @@ export default function PartnerSpinPage() {
 
   const copyCode = () => {
     if (!spin?.promoCode) return;
-    navigator.clipboard.writeText(spin.promoCode);
+    copyToClipboard(spin.promoCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

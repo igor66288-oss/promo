@@ -6,6 +6,7 @@ import { useLocale } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import api from '@/lib/api';
+import { copyToClipboard } from '@/lib/clipboard';
 
 interface Store {
   id: string;
@@ -67,7 +68,7 @@ function CodeModal({
   const [copied, setCopied] = useState(false);
 
   const copyCode = async () => {
-    await navigator.clipboard.writeText(claimedCode.code);
+    copyToClipboard(claimedCode.code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

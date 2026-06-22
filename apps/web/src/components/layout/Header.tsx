@@ -74,7 +74,7 @@ export function Header() {
                 fontWeight: locale === lng ? '700' : '400',
               }}
             >
-              {lng === 'th' ? '🇹🇭' : '🇬🇧'}
+              {lng === 'th' ? 'TH' : 'EN'}
             </button>
           ))}
         </div>
@@ -82,10 +82,10 @@ export function Header() {
         {/* Auth */}
         {user ? (
           <div className="flex items-center gap-1 sm:gap-2">
-            <Link href={`/${locale}/dashboard`} className="text-xs sm:text-sm font-semibold px-2 sm:px-3 py-1.5 rounded-lg" style={{
+            <Link href={`/${locale}/${user?.role === 'CUSTOMER' ? 'account' : 'dashboard'}`} className="text-xs sm:text-sm font-semibold px-2 sm:px-3 py-1.5 rounded-lg" style={{
               background: 'rgba(6,182,212,0.15)', border: '1px solid rgba(6,182,212,0.2)', color: '#67E8F9', textDecoration: 'none',
             }}>
-              {locale === 'th' ? 'แดชบอร์ด' : 'Dashboard'}
+              {user?.role === 'CUSTOMER' ? (locale === 'th' ? 'บัญชีของฉัน' : 'My Account') : (locale === 'th' ? 'แดชบอร์ด' : 'Dashboard')}
             </Link>
             <button onClick={logout} className="hidden sm:block text-xs px-3 py-1.5 rounded-lg cursor-pointer" style={{
               background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)',

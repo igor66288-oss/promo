@@ -7,6 +7,7 @@ import { useLocale } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import api from '@/lib/api';
+import { copyToClipboard } from '@/lib/clipboard';
 
 interface Store {
   id: string;
@@ -71,7 +72,7 @@ function CodeCard({ code, locale }: { code: PromoCode; locale: string }) {
   const status = statusConfig[code.status] || statusConfig.ISSUED;
 
   const copyCode = async () => {
-    await navigator.clipboard.writeText(code.code);
+    copyToClipboard(code.code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

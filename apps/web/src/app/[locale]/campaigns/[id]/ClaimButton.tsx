@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import api from '@/lib/api';
+import { copyToClipboard } from '@/lib/clipboard';
 
 interface ClaimedCode {
   id: string;
@@ -49,7 +50,7 @@ export function ClaimButton({ campaignId, locale }: Props) {
 
   const copyCode = async () => {
     if (!claimedCode) return;
-    await navigator.clipboard.writeText(claimedCode.code);
+    copyToClipboard(claimedCode.code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
