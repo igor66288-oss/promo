@@ -1,0 +1,172 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String   @id @default(cuid())
+  email      String?  @unique
+  phone      String?  @unique
+  password   String?
+  role       Role     @default(CUSTOMER)
+  name       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  store      Store?
+  promoCodes PromoCode[]
+  events     Event[]
+}
+
+enum Role {
+  CUSTOMER
+  MERCHANT
+  ADMIN
+}
+
+model Store {
+  id          String      @id @default(cuid())
+  userId      String      @unique
+  user        User        @relation(fields: [userId], references: [id])
+  name        String
+  description String?
+  logo        String?
+  website     String?
+  balance     Int         @default(0)
+  tariff      Tariff      @default(CPA)
+  status      StoreStatus @default(PENDING)
+  apiKey      String      @unique @default(cuid())
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  campaigns   Campaign[]
+  invoices    Invoice[]
+  events      Event[]
+}
+
+enum Tariff {
+  CPC
+  CPA
+  SUBSCRIPTION
+}
+
+enum StoreStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+model Campaign {
+  id            String         @id @default(cuid())
+  storeId       String
+  store         Store          @relation(fields: [storeId], references: [id])
+  title         String
+  description   String?
+  discountType  DiscountType
+  discountValue Int
+  conditions    String?
+  startsAt      DateTime
+  endsAt        DateTime
+  totalLimit    Int?
+  perUserLimit  Int            @default(1)
+  status        CampaignStatus @default(DRAFT)
+  promoted      Boolean        @default(false)
+  promotedUntil DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  promoCodes    PromoCode[]
+  roulette      RouletteConfig?
+  events        Event[]
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+  GIFT
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+model PromoCode {
+  id         String      @id @default(cuid())
+  code       String      @unique
+  campaignId String
+  campaign   Campaign    @relation(fields: [campaignId], references: [id])
+  userId     String?
+  user       User?       @relation(fields: [userId], references: [id])
+  status     PromoStatus @default(CREATED)
+  expiresAt  DateTime?
+  usedAt     DateTime?
+  createdAt  DateTime    @default(now())
+  events     Event[]
+}
+
+enum PromoStatus {
+  CREATED
+  ISSUED
+  VIEWED
+  REDEEMED
+  CONVERTED
+}
+
+model Event {
+  id          String     @id @default(cuid())
+  type        EventType
+  storeId     String?
+  store       Store?     @relation(fields: [storeId], references: [id])
+  campaignId  String?
+  campaign    Campaign?  @relation(fields: [campaignId], references: [id])
+  userId      String?
+  user        User?      @relation(fields: [userId], references: [id])
+  promoCodeId String?
+  promoCode   PromoCode? @relation(fields: [promoCodeId], references: [id])
+  metadata    Json?
+  createdAt   DateTime   @default(now())
+}
+
+enum EventType {
+  IMPRESSION
+  CLICK
+  REDEMPTION
+  CONVERSION
+  ROULETTE_SPIN
+}
+
+model RouletteConfig {
+  id              String   @id @default(cuid())
+  campaignId      String   @unique
+  campaign        Campaign @relation(fields: [campaignId], references: [id])
+  sectors         Json
+  maxSpinsPerUser Int      @default(1)
+  spinsPerPeriod  Int      @default(1)
+  periodHours     Int      @default(24)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  storeId       String
+  store         Store         @relation(fields: [storeId], references: [id])
+  amount        Int
+  status        InvoiceStatus @default(PENDING)
+  pdfUrl        String?
+  omiseChargeId String?
+  createdAt     DateTime      @default(now())
+  paidAt        DateTime?
+  items         Json
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+}

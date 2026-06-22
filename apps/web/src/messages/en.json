@@ -1,0 +1,45 @@
+{
+  "nav": {
+    "home": "Home",
+    "login": "Login",
+    "register": "Register",
+    "dashboard": "Dashboard"
+  },
+  "home": {
+    "title": "Promo - Thailand's Best Deals",
+    "subtitle": "Find exclusive discounts and promo codes",
+    "browse": "Browse Deals"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "name": "Full Name",
+    "role": "Account Type",
+    "roleCustomer": "Customer",
+    "roleMerchant": "Merchant",
+    "submit": "Submit",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "loginError": "Invalid email or password",
+    "registerError": "Registration failed"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "campaigns": "Campaigns",
+    "analytics": "Analytics",
+    "billing": "Billing",
+    "totalCampaigns": "Total Campaigns",
+    "activeCodes": "Active Codes",
+    "revenue": "Revenue (THB)",
+    "newCampaign": "New Campaign",
+    "campaignTitle": "Campaign Title",
+    "discountType": "Discount Type",
+    "discountValue": "Discount Value",
+    "startsAt": "Starts At",
+    "endsAt": "Ends At",
+    "create": "Create Campaign",
+    "status": "Status"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "@promo/widget",
+  "version": "1.0.0",
+  "description": "Embeddable promo widget for merchant websites",
+  "main": "promo-widget.js"
+}

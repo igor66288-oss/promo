@@ -1,0 +1,45 @@
+{
+  "nav": {
+    "home": "หน้าหลัก",
+    "login": "เข้าสู่ระบบ",
+    "register": "สมัครสมาชิก",
+    "dashboard": "แดชบอร์ด"
+  },
+  "home": {
+    "title": "Promo - ดีลและส่วนลดสุดคุ้มในไทย",
+    "subtitle": "ค้นหาส่วนลดพิเศษและโปรโมโค้ด",
+    "browse": "ดูดีลทั้งหมด"
+  },
+  "auth": {
+    "login": "เข้าสู่ระบบ",
+    "register": "สมัครสมาชิก",
+    "email": "อีเมล",
+    "password": "รหัสผ่าน",
+    "name": "ชื่อ-นามสกุล",
+    "role": "ประเภทบัญชี",
+    "roleCustomer": "ลูกค้า",
+    "roleMerchant": "ร้านค้า",
+    "submit": "ยืนยัน",
+    "noAccount": "ยังไม่มีบัญชี?",
+    "hasAccount": "มีบัญชีแล้ว?",
+    "loginError": "อีเมลหรือรหัสผ่านไม่ถูกต้อง",
+    "registerError": "การสมัครสมาชิกล้มเหลว"
+  },
+  "dashboard": {
+    "title": "แดชบอร์ด",
+    "campaigns": "แคมเปญ",
+    "analytics": "วิเคราะห์",
+    "billing": "การชำระเงิน",
+    "totalCampaigns": "แคมเปญทั้งหมด",
+    "activeCodes": "โค้ดที่ใช้งานได้",
+    "revenue": "รายได้ (บาท)",
+    "newCampaign": "สร้างแคมเปญใหม่",
+    "campaignTitle": "ชื่อแคมเปญ",
+    "discountType": "ประเภทส่วนลด",
+    "discountValue": "มูลค่าส่วนลด",
+    "startsAt": "วันเริ่มต้น",
+    "endsAt": "วันสิ้นสุด",
+    "create": "สร้างแคมเปญ",
+    "status": "สถานะ"
+  }
+}
