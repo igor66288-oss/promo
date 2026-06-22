@@ -8,17 +8,29 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(cuid())
-  email      String?  @unique
-  phone      String?  @unique
-  password   String?
-  role       Role     @default(CUSTOMER)
-  name       String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  store      Store?
-  promoCodes PromoCode[]
-  events     Event[]
+  id          String    @id @default(cuid())
+  email       String?   @unique
+  phone       String?   @unique
+  password    String?
+  role        Role      @default(CUSTOMER)
+  name        String?
+  firstName   String?
+  lastName    String?
+  middleName  String?
+  gender      Gender?
+  birthDate   DateTime?
+  country     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  store       Store?
+  promoCodes  PromoCode[]
+  events      Event[]
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
 }
 
 enum Role {

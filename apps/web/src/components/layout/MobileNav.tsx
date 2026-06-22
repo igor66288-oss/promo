@@ -39,8 +39,9 @@ export function MobileNav() {
   ];
 
   const customerItems = [
-    { href: `/${locale}/dashboard`, icon: '▦', label: th ? 'หน้าแรก' : 'Home' },
-    { href: `/${locale}/dashboard/my-codes`, icon: '◈', label: th ? 'โค้ด' : 'Codes' },
+    { href: `/${locale}/account`, icon: '▦', label: th ? 'หน้าแรก' : 'Home' },
+    { href: `/${locale}/account/codes`, icon: '◈', label: th ? 'โค้ด' : 'Codes' },
+    { href: `/${locale}/account/profile`, icon: '◉', label: th ? 'โปรไฟล์' : 'Profile' },
     { href: `/${locale}`, icon: '⊕', label: th ? 'ดีล' : 'Deals' },
   ];
 

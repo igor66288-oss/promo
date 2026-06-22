@@ -11,6 +11,7 @@ import { RouletteModule } from './roulette/roulette.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { BillingModule } from './billing/billing.module';
 import { PartnerModule } from './partner/partner.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { PartnerModule } from './partner/partner.module';
     AnalyticsModule,
     BillingModule,
     PartnerModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

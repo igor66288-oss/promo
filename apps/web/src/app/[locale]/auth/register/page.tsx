@@ -13,7 +13,9 @@ export default function RegisterPage() {
   const router = useRouter();
 
   const [name, setName] = useState('');
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'CUSTOMER' | 'MERCHANT'>('CUSTOMER');
   const [error, setError] = useState('');
@@ -25,11 +27,15 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/register', { name, email, password, role });
+      const payload: any = { name, password, role };
+      if (loginMethod === 'email') payload.email = email;
+      else payload.phone = phone;
+
+      const response = await api.post('/auth/register', payload);
       const { token, user } = response.data;
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
-      router.push(`/${locale}/dashboard`);
+      router.push(user.role === 'CUSTOMER' ? `/${locale}/account` : `/${locale}/dashboard`);
     } catch (err: any) {
       setError(err?.response?.data?.message || t('registerError'));
     } finally {
@@ -59,82 +65,62 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-white/70 text-sm font-medium mb-2">
-                {t('name')}
-              </label>
+              <label className="block text-white/70 text-sm font-medium mb-2">{t('name')}</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={locale === 'th' ? 'ชื่อ-นามสกุล' : 'Your full name'}
+                placeholder={locale === 'th' ? 'ชื่อ-นามสกุล' : 'Your name'}
                 className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#06B6D4] transition-colors"
               />
             </div>
 
+            {/* Login method toggle */}
             <div>
               <label className="block text-white/70 text-sm font-medium mb-2">
-                {t('email')}
+                {locale === 'th' ? 'วิธีเข้าสู่ระบบ' : 'Login method'}
               </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="you@example.com"
-                className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#06B6D4] transition-colors"
-              />
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                {(['email', 'phone'] as const).map(m => (
+                  <button key={m} type="button" onClick={() => setLoginMethod(m)}
+                    className={`py-2.5 rounded-lg border text-sm font-medium transition-all ${loginMethod === m ? 'bg-[#06B6D4]/20 border-[#06B6D4] text-[#67E8F9]' : 'bg-white/5 border-white/10 text-white/50'}`}>
+                    {m === 'email' ? '✉️ Email' : `📱 ${locale === 'th' ? 'เบอร์โทร' : 'Phone'}`}
+                  </button>
+                ))}
+              </div>
+              {loginMethod === 'email' ? (
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@example.com"
+                  className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#06B6D4] transition-colors" />
+              ) : (
+                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="+66812345678"
+                  className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#06B6D4] transition-colors" />
+              )}
             </div>
 
             <div>
-              <label className="block text-white/70 text-sm font-medium mb-2">
-                {t('password')}
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                placeholder="••••••••"
-                className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#06B6D4] transition-colors"
-              />
+              <label className="block text-white/70 text-sm font-medium mb-2">{t('password')}</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} placeholder="••••••••"
+                className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#06B6D4] transition-colors" />
             </div>
 
             <div>
-              <label className="block text-white/70 text-sm font-medium mb-2">
-                {t('role')}
-              </label>
+              <label className="block text-white/70 text-sm font-medium mb-2">{t('role')}</label>
               <div className="grid grid-cols-2 gap-3">
-                {(['CUSTOMER', 'MERCHANT'] as const).map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setRole(r)}
-                    className={`py-3 px-4 rounded-lg border text-sm font-medium transition-all duration-200 ${
-                      role === r
-                        ? 'bg-[#06B6D4] border-[#06B6D4] text-white'
-                        : 'bg-white/5 border-white/15 text-white/60 hover:border-white/30'
-                    }`}
-                  >
+                {(['CUSTOMER', 'MERCHANT'] as const).map(r => (
+                  <button key={r} type="button" onClick={() => setRole(r)}
+                    className={`py-3 px-4 rounded-lg border text-sm font-medium transition-all duration-200 ${role === r ? 'bg-[#06B6D4] border-[#06B6D4] text-white' : 'bg-white/5 border-white/15 text-white/60 hover:border-white/30'}`}>
                     {r === 'CUSTOMER' ? t('roleCustomer') : t('roleMerchant')}
                   </button>
                 ))}
               </div>
             </div>
 
-            <Button type="submit" loading={loading} className="w-full" size="lg">
-              {t('submit')}
-            </Button>
+            <Button type="submit" loading={loading} className="w-full" size="lg">{t('submit')}</Button>
           </form>
 
           <p className="mt-6 text-center text-white/50 text-sm">
             {t('hasAccount')}{' '}
-            <Link
-              href={`/${locale}/auth/login`}
-              className="text-[#67E8F9] hover:text-white transition-colors"
-            >
-              {t('login')}
-            </Link>
+            <Link href={`/${locale}/auth/login`} className="text-[#67E8F9] hover:text-white transition-colors">{t('login')}</Link>
           </p>
         </div>
       </div>
