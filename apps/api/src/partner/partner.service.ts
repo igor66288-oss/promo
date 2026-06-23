@@ -105,6 +105,31 @@ export class PartnerService {
     });
   }
 
+  async getAllConfigs() {
+    return this.prisma.partnerConfig.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { _count: { select: { spins: true } } },
+    });
+  }
+
+  async createConfig(name: string, slug: string) {
+    return this.prisma.partnerConfig.create({
+      data: { name, slug },
+    });
+  }
+
+  async getSpinsByPartner(partnerId: string) {
+    return this.prisma.partnerSpin.findMany({
+      where: { partnerId },
+      include: {
+        promoCode: { select: { code: true } },
+        campaign: { select: { title: true, discountType: true, discountValue: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+  }
+
   private formatSpin(spin: any) {
     return {
       id: spin.id,
