@@ -41,6 +41,9 @@ services:
       OMISE_SECRET_KEY: ${OMISE_SECRET_KEY}
       PORT: 3001
       WEB_URL: ${WEB_URL:-http://5.223.88.83}
+    volumes:
+      - ./apps/api/dist:/app/apps/api/dist:ro
+      - ./apps/api/prisma:/app/apps/api/prisma:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -56,6 +59,8 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     restart: unless-stopped
+    volumes:
+      - ./apps/web/.next:/app/apps/web/.next:ro
     depends_on:
       - api
     networks:
