@@ -30,6 +30,11 @@ export class UsersController {
     return this.usersService.claimCode(req.user.id, campaignId);
   }
 
+  @Get('me/referral')
+  getReferral(@Request() req: any) {
+    return this.usersService.getReferralInfo(req.user.id);
+  }
+
   @Get()
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)

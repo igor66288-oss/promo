@@ -33,6 +33,17 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+    // Generate unique referral code for this user
+    const refCode = Math.random().toString(36).slice(2, 8).toUpperCase();
+
+    // Check if referrer exists
+    let referrerId: string | null = null;
+    if ((dto as any).refCode) {
+      const referrer = await this.prisma.user.findUnique({ where: { refCode: (dto as any).refCode } });
+      if (referrer) referrerId = referrer.id;
+    }
+
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
@@ -40,8 +51,16 @@ export class AuthService {
         password: hashedPassword,
         name: dto.name,
         role: dto.role ?? Role.CUSTOMER,
+        refCode,
+        referredBy: referrerId ?? undefined,
       },
     });
+
+    // Award referral bonus points to both parties
+    if (referrerId) {
+      await this.prisma.user.update({ where: { id: referrerId }, data: { points: { increment: 100 } } });
+      await this.prisma.user.update({ where: { id: user.id }, data: { points: { increment: 50 } } });
+    }
 
     const token = this.signToken(user.id, user.email, user.role);
     const { password: _, ...userWithoutPassword } = user;

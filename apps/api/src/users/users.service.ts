@@ -76,6 +76,16 @@ export class UsersService {
     });
   }
 
+  async getReferralInfo(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { refCode: true, points: true, referredBy: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    const referralCount = await this.prisma.user.count({ where: { referredBy: userId } });
+    return { refCode: user.refCode, points: user.points, referralCount };
+  }
+
   async claimCode(userId: string, campaignId: string) {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id: campaignId },

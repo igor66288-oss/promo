@@ -30,6 +30,8 @@ export default function AccountPage() {
   const [claimed, setClaimed] = useState<Record<string, boolean>>({});
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [refInfo, setRefInfo] = useState<{ refCode: string; points: number; referralCount: number } | null>(null);
+  const [refCopied, setRefCopied] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
@@ -41,11 +43,13 @@ export default function AccountPage() {
     Promise.all([
       api.get('/campaigns?status=ACTIVE'),
       api.get('/users/me/codes'),
-    ]).then(([c, codes]) => {
+      api.get('/users/me/referral').catch(() => null),
+    ]).then(([c, codes, ref]) => {
       setCampaigns(c.data);
       const claimedMap: Record<string, boolean> = {};
       codes.data.forEach((code: any) => { claimedMap[code.campaignId] = true; });
       setClaimed(claimedMap);
+      if (ref) setRefInfo(ref.data);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -90,7 +94,7 @@ export default function AccountPage() {
         </div>
 
         {/* Quick stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
           {[
             { label: locale === 'th' ? 'โค้ดที่มี' : 'My Codes', value: Object.keys(claimed).length, icon: '🎫', color: '#06B6D4' },
             { label: locale === 'th' ? 'แคมเปญใช้ได้' : 'Active Deals', value: campaigns.length, icon: '🔥', color: '#F97316' },
@@ -103,9 +107,43 @@ export default function AccountPage() {
           ))}
         </div>
 
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>
+        {/* Points & Referral */}
+        {refInfo && (
+          <div style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.12), rgba(6,182,212,0.12))', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 16, padding: '18px', marginBottom: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{locale === 'th' ? '⭐ พอยท์สะสม' : '⭐ Loyalty Points'}</p>
+                <p style={{ margin: '2px 0 0', fontSize: 28, fontWeight: 900, color: '#F97316' }}>{refInfo.points}</p>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{locale === 'th' ? '👥 เพื่อนที่ชวน' : '👥 Referrals'}</p>
+                <p style={{ margin: '2px 0 0', fontSize: 28, fontWeight: 900, color: '#06B6D4' }}>{refInfo.referralCount}</p>
+              </div>
+            </div>
+            <p style={{ margin: '0 0 8px', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{locale === 'th' ? '🔗 ลิงก์ชวนเพื่อน (รับ +100 พอยท์เมื่อเพื่อนสมัคร)' : '🔗 Invite friends (+100 pts each)'}</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 8, padding: '8px 12px', overflow: 'hidden' }}>
+                <span style={{ fontSize: 12, color: '#67E8F9', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                  {typeof window !== 'undefined' ? `${window.location.origin}/${locale}/ref/${refInfo.refCode}` : ''}
+                </span>
+              </div>
+              <button onClick={() => {
+                const url = `${window.location.origin}/${locale}/ref/${refInfo.refCode}`;
+                navigator.clipboard?.writeText(url).catch(() => {
+                  const el = document.createElement('textarea'); el.value = url; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
+                });
+                setRefCopied(true); setTimeout(() => setRefCopied(false), 2000);
+              }} style={{ padding: '8px 14px', background: refCopied ? 'rgba(16,185,129,0.3)' : 'rgba(6,182,212,0.2)', border: `1px solid ${refCopied ? '#10B981' : '#06B6D4'}`, borderRadius: 8, color: refCopied ? '#10B981' : '#67E8F9', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+                {refCopied ? '✓' : locale === 'th' ? 'คัดลอก' : 'Copy'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, marginTop: 0 }}>
           {locale === 'th' ? '🔥 โปรโมชั่นที่ใช้ได้ตอนนี้' : '🔥 Active Deals'}
         </h2>
+
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: 60, color: 'rgba(255,255,255,0.3)' }}>Loading...</div>

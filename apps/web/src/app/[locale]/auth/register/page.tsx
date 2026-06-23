@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations, useLocale } from 'next-intl';
@@ -20,6 +20,12 @@ export default function RegisterPage() {
   const [role, setRole] = useState<'CUSTOMER' | 'MERCHANT'>('CUSTOMER');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [refCode, setRefCode] = useState('');
+
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('refCode') : '';
+    if (saved) setRefCode(saved);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,11 +36,13 @@ export default function RegisterPage() {
       const payload: any = { name, password, role };
       if (loginMethod === 'email') payload.email = email;
       else payload.phone = phone;
+      if (refCode.trim()) payload.refCode = refCode.trim().toUpperCase();
 
       const response = await api.post('/auth/register', payload);
       const { token, user } = response.data;
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
+      localStorage.removeItem('refCode');
       router.push(user.role === 'CUSTOMER' ? `/${locale}/account` : `/${locale}/dashboard`);
     } catch (err: any) {
       setError(err?.response?.data?.message || t('registerError'));
@@ -113,6 +121,15 @@ export default function RegisterPage() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div>
+              <label className="block text-white/70 text-sm font-medium mb-2">
+                {locale === 'th' ? '🎁 รหัสชวนเพื่อน (ไม่บังคับ)' : '🎁 Referral code (optional)'}
+              </label>
+              <input type="text" value={refCode} onChange={e => setRefCode(e.target.value.toUpperCase())} placeholder="ABCDEF"
+                className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#F97316] transition-colors font-mono tracking-widest" />
+              {refCode && <p className="mt-1 text-xs text-orange-400">+50 {locale === 'th' ? 'พอยท์สำหรับคุณ!' : 'points for you!'}</p>}
             </div>
 
             <Button type="submit" loading={loading} className="w-full" size="lg">{t('submit')}</Button>
