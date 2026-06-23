@@ -5,13 +5,17 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { Role } from '@prisma/client';
 
 @Injectable()
 export class CampaignsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async create(userId: string, dto: CreateCampaignDto) {
     const store = await this.prisma.store.findUnique({ where: { userId } });
@@ -122,7 +126,7 @@ export class CampaignsService {
       throw new ForbiddenException('You can only update your own campaigns');
     }
 
-    return this.prisma.campaign.update({
+    const updated = await this.prisma.campaign.update({
       where: { id },
       data: {
         ...dto,
@@ -130,6 +134,11 @@ export class CampaignsService {
         endsAt: dto.endsAt ? new Date(dto.endsAt) : undefined,
       },
     });
+    // Notify customers when campaign becomes ACTIVE
+    if (dto.status === 'ACTIVE' && campaign.status !== 'ACTIVE') {
+      this.notifications.sendNewCampaignNotification(id).catch(() => {});
+    }
+    return updated;
   }
 
   async promoteCampaign(campaignId: string, merchantUserId: string, days: number) {
