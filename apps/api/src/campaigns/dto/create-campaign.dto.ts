@@ -7,7 +7,7 @@ import {
   IsDateString,
   Min,
 } from 'class-validator';
-import { DiscountType, CampaignStatus } from '@prisma/client';
+import { DiscountType, CampaignStatus, CampaignCategory } from '@prisma/client';
 
 export class CreateCampaignDto {
   @IsString()
@@ -49,4 +49,8 @@ export class CreateCampaignDto {
   @IsBoolean()
   @IsOptional()
   promoted?: boolean;
+
+  @IsEnum(CampaignCategory)
+  @IsOptional()
+  category?: CampaignCategory;
 }

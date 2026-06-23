@@ -5,6 +5,7 @@ import {
   Patch,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -28,8 +29,8 @@ export class CampaignsController {
   }
 
   @Get('campaigns')
-  findAll() {
-    return this.campaignsService.findAll();
+  findAll(@Query('category') category?: string) {
+    return this.campaignsService.findAll(category);
   }
 
   @Get('campaigns/:id')

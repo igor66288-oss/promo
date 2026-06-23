@@ -84,6 +84,7 @@ model Campaign {
   totalLimit    Int?
   perUserLimit  Int            @default(1)
   status        CampaignStatus @default(DRAFT)
+  category      CampaignCategory @default(OTHER)
   promoted      Boolean        @default(false)
   promotedUntil DateTime?
   createdAt     DateTime       @default(now())
@@ -99,6 +100,19 @@ enum DiscountType {
   PERCENTAGE
   FIXED
   GIFT
+}
+
+enum CampaignCategory {
+  FOOD
+  BEAUTY
+  FASHION
+  ENTERTAINMENT
+  FITNESS
+  TRAVEL
+  HEALTH
+  SERVICES
+  SHOPPING
+  OTHER
 }
 
 enum CampaignStatus {

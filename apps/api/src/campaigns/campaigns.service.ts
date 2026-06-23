@@ -31,15 +31,18 @@ export class CampaignsService {
         perUserLimit: dto.perUserLimit ?? 1,
         status: dto.status ?? 'DRAFT',
         promoted: dto.promoted ?? false,
+        category: dto.category ?? 'OTHER',
       },
       include: { store: { select: { id: true, name: true } } },
     });
   }
 
-  async findAll() {
+  async findAll(category?: string) {
     await this.deactivateExpiredPromotions();
+    const where: any = { status: 'ACTIVE' };
+    if (category && category !== 'ALL') where.category = category;
     return this.prisma.campaign.findMany({
-      where: { status: 'ACTIVE' },
+      where,
       include: {
         store: { select: { id: true, name: true, logo: true } },
         _count: { select: { promoCodes: true } },

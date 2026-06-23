@@ -84,6 +84,7 @@ export default function CampaignsPage() {
     title: '',
     discountType: 'PERCENTAGE',
     discountValue: 10,
+    category: 'OTHER',
     startsAt: new Date().toISOString().split('T')[0],
     endsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'DRAFT',
@@ -127,6 +128,7 @@ export default function CampaignsPage() {
         title: '',
         discountType: 'PERCENTAGE',
         discountValue: 10,
+        category: 'OTHER',
         startsAt: new Date().toISOString().split('T')[0],
         endsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         status: 'DRAFT',
@@ -252,6 +254,28 @@ export default function CampaignsPage() {
                     placeholder={locale === 'th' ? 'ชื่อแคมเปญ' : 'Campaign title'}
                     className="w-full bg-white/5 border border-white/15 rounded-lg px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-[#06B6D4] transition-colors"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-white/70 text-sm font-medium mb-2">
+                    {locale === 'th' ? 'หมวดหมู่' : 'Category'}
+                  </label>
+                  <select
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    className="w-full bg-[#0F172A] border border-white/15 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#06B6D4] transition-colors"
+                  >
+                    <option value="FOOD">🍽️ {locale === 'th' ? 'อาหาร' : 'Food'}</option>
+                    <option value="BEAUTY">💄 {locale === 'th' ? 'ความงาม' : 'Beauty'}</option>
+                    <option value="FASHION">👗 {locale === 'th' ? 'แฟชั่น' : 'Fashion'}</option>
+                    <option value="ENTERTAINMENT">🎮 {locale === 'th' ? 'บันเทิง' : 'Entertainment'}</option>
+                    <option value="FITNESS">💪 {locale === 'th' ? 'ฟิตเนส' : 'Fitness'}</option>
+                    <option value="TRAVEL">✈️ {locale === 'th' ? 'ท่องเที่ยว' : 'Travel'}</option>
+                    <option value="HEALTH">🏥 {locale === 'th' ? 'สุขภาพ' : 'Health'}</option>
+                    <option value="SERVICES">⚙️ {locale === 'th' ? 'บริการ' : 'Services'}</option>
+                    <option value="SHOPPING">🛍️ {locale === 'th' ? 'ช้อปปิ้ง' : 'Shopping'}</option>
+                    <option value="OTHER">📦 {locale === 'th' ? 'อื่นๆ' : 'Other'}</option>
+                  </select>
                 </div>
 
                 <div>
