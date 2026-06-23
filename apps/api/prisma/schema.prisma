@@ -25,6 +25,7 @@ model User {
   store       Store?
   promoCodes  PromoCode[]
   events      Event[]
+  reviews     Review[]
 }
 
 enum Gender {
@@ -60,6 +61,7 @@ model Store {
   campaigns   Campaign[]
   invoices    Invoice[]
   events      Event[]
+  reviews     Review[]
 }
 
 enum Tariff {
@@ -203,6 +205,20 @@ model PartnerSpin {
   status        SpinStatus    @default(COMPLETED)
   createdAt     DateTime      @default(now())
   expiresAt     DateTime
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  storeId    String
+  store      Store    @relation(fields: [storeId], references: [id])
+  campaignId String?
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, storeId])
 }
 
 model RouletteConfig {

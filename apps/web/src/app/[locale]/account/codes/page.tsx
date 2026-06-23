@@ -18,7 +18,7 @@ interface PromoCode {
     title: string;
     discountType: string;
     discountValue: number;
-    store: { name: string };
+    store: { id: string; name: string };
   };
 }
 
@@ -104,6 +104,47 @@ function QRModal({ code, onClose, locale }: { code: PromoCode; onClose: () => vo
   );
 }
 
+function ReviewModal({ code, onClose, locale }: { code: PromoCode; onClose: () => void; locale: string }) {
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const submit = async () => {
+    setLoading(true);
+    try {
+      await api.post('/reviews', { storeId: code.campaign.store.id, rating, comment, campaignId: code.campaign.id });
+      setDone(true);
+      setTimeout(onClose, 1500);
+    } catch {} finally { setLoading(false); }
+  };
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 24, padding: 28, textAlign: 'center', maxWidth: 340, width: '100%' }}>
+        {done ? (
+          <div><div style={{ fontSize: 48 }}>🙏</div><h3 style={{ margin: '12px 0 0' }}>{locale === 'th' ? 'ขอบคุณสำหรับรีวิว!' : 'Thank you for your review!'}</h3></div>
+        ) : (
+          <>
+            <h2 style={{ margin: '0 0 4px', fontSize: 18 }}>{locale === 'th' ? 'ให้คะแนน' : 'Rate your experience'}</h2>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>{code.campaign.store.name}</p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 20 }}>
+              {[1,2,3,4,5].map(s => (
+                <button key={s} onClick={() => setRating(s)} style={{ fontSize: 32, background: 'none', border: 'none', cursor: 'pointer', filter: s <= rating ? 'none' : 'grayscale(1) opacity(0.3)', transition: 'all 0.15s' }}>⭐</button>
+              ))}
+            </div>
+            <textarea value={comment} onChange={e => setComment(e.target.value)} placeholder={locale === 'th' ? 'ความคิดเห็น (ไม่บังคับ)' : 'Comment (optional)'} rows={3}
+              style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '10px 14px', color: 'white', fontSize: 13, resize: 'none', outline: 'none', boxSizing: 'border-box', marginBottom: 16 }} />
+            <button onClick={submit} disabled={loading} style={{ width: '100%', padding: 12, background: 'linear-gradient(135deg,#06B6D4,#F97316)', border: 'none', borderRadius: 10, color: 'white', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+              {loading ? '...' : (locale === 'th' ? 'ส่งรีวิว' : 'Submit Review')}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function MyCodesPage() {
   const router = useRouter();
   const params = useParams();
@@ -113,6 +154,7 @@ export default function MyCodesPage() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<PromoCode | null>(null);
+  const [reviewCode, setReviewCode] = useState<PromoCode | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
@@ -136,6 +178,7 @@ export default function MyCodesPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#030712', color: 'white', fontFamily: 'sans-serif' }}>
       {qrCode && <QRModal code={qrCode} onClose={() => setQrCode(null)} locale={locale} />}
+      {reviewCode && <ReviewModal code={reviewCode} onClose={() => setReviewCode(null)} locale={locale} />}
 
       {/* Header */}
       <div style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -247,6 +290,11 @@ export default function MyCodesPage() {
                       </span>
                     )}
                   </div>
+                  {['REDEEMED', 'CONVERTED'].includes(c.status) && (
+                    <button onClick={() => setReviewCode(c)} style={{ marginTop: 10, width: '100%', padding: '8px', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 8, color: '#FBBF24', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                      ⭐ {locale === 'th' ? 'ให้คะแนนร้านนี้' : 'Rate this store'}
+                    </button>
+                  )}
                 </div>
               );
             })}
