@@ -120,23 +120,27 @@ export default function AccountPage() {
                 <p style={{ margin: '2px 0 0', fontSize: 28, fontWeight: 900, color: '#06B6D4' }}>{refInfo.referralCount}</p>
               </div>
             </div>
-            <p style={{ margin: '0 0 8px', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{locale === 'th' ? '🔗 ลิงก์ชวนเพื่อน (รับ +100 พอยท์เมื่อเพื่อนสมัคร)' : '🔗 Invite friends (+100 pts each)'}</p>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <div style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 8, padding: '8px 12px', overflow: 'hidden' }}>
-                <span style={{ fontSize: 12, color: '#67E8F9', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-                  {typeof window !== 'undefined' ? `${window.location.origin}/${locale}/ref/${refInfo.refCode}` : ''}
-                </span>
-              </div>
-              <button onClick={() => {
-                const url = `${window.location.origin}/${locale}/ref/${refInfo.refCode}`;
-                navigator.clipboard?.writeText(url).catch(() => {
-                  const el = document.createElement('textarea'); el.value = url; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
-                });
-                setRefCopied(true); setTimeout(() => setRefCopied(false), 2000);
-              }} style={{ padding: '8px 14px', background: refCopied ? 'rgba(16,185,129,0.3)' : 'rgba(6,182,212,0.2)', border: `1px solid ${refCopied ? '#10B981' : '#06B6D4'}`, borderRadius: 8, color: refCopied ? '#10B981' : '#67E8F9', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
-                {refCopied ? '✓' : locale === 'th' ? 'คัดลอก' : 'Copy'}
-              </button>
-            </div>
+            {refInfo.refCode && (
+              <>
+                <p style={{ margin: '0 0 8px', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{locale === 'th' ? '🔗 ลิงก์ชวนเพื่อน (รับ +100 พอยท์เมื่อเพื่อนสมัคร)' : '🔗 Invite friends (+100 pts each)'}</p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 8, padding: '8px 12px', overflow: 'hidden' }}>
+                    <span style={{ fontSize: 12, color: '#67E8F9', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                      {typeof window !== 'undefined' ? `${window.location.origin}/${locale}/ref/${refInfo.refCode}` : ''}
+                    </span>
+                  </div>
+                  <button onClick={() => {
+                    const url = `${window.location.origin}/${locale}/ref/${refInfo.refCode}`;
+                    navigator.clipboard?.writeText(url).catch(() => {
+                      const el = document.createElement('textarea'); el.value = url; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
+                    });
+                    setRefCopied(true); setTimeout(() => setRefCopied(false), 2000);
+                  }} style={{ padding: '8px 14px', background: refCopied ? 'rgba(16,185,129,0.3)' : 'rgba(6,182,212,0.2)', border: `1px solid ${refCopied ? '#10B981' : '#06B6D4'}`, borderRadius: 8, color: refCopied ? '#10B981' : '#67E8F9', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+                    {refCopied ? '✓' : locale === 'th' ? 'คัดลอก' : 'Copy'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
