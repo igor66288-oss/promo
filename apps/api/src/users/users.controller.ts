@@ -35,6 +35,11 @@ export class UsersController {
     return this.usersService.getReferralInfo(req.user.id);
   }
 
+  @Post('me/redeem-points/:campaignId')
+  redeemPoints(@Request() req: any, @Param('campaignId') campaignId: string) {
+    return this.usersService.redeemPoints(req.user.id, campaignId);
+  }
+
   @Get()
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)

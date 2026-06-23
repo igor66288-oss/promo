@@ -96,6 +96,14 @@ export class StoresService {
       });
     }
 
+    // Award loyalty points to customer (10 points per redemption)
+    if (promoCode.userId) {
+      await this.prisma.user.update({
+        where: { id: promoCode.userId },
+        data: { points: { increment: 10 } },
+      }).catch(() => {});
+    }
+
     return {
       success: true,
       code: updated.code,

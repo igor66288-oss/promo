@@ -72,6 +72,29 @@ function isFeatured(c: Campaign): boolean {
   return c.promoted === true && !!c.promotedUntil && new Date(c.promotedUntil) > new Date();
 }
 
+function isFlash(c: Campaign): boolean {
+  const hoursLeft = (new Date(c.endsAt).getTime() - Date.now()) / 3600000;
+  return hoursLeft > 0 && hoursLeft <= 24;
+}
+
+function Countdown({ endsAt }: { endsAt: string }) {
+  const [timeLeft, setTimeLeft] = useState('');
+  useEffect(() => {
+    const update = () => {
+      const diff = new Date(endsAt).getTime() - Date.now();
+      if (diff <= 0) { setTimeLeft('00:00:00'); return; }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setTimeLeft(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`);
+    };
+    update();
+    const t = setInterval(update, 1000);
+    return () => clearInterval(t);
+  }, [endsAt]);
+  return <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#ef4444', fontSize: 13 }}>⏱ {timeLeft}</span>;
+}
+
 function CodeModal({ claimedCode, onClose, locale }: { claimedCode: ClaimedCode; onClose: () => void; locale: string }) {
   const [copied, setCopied] = useState(false);
   const copyCode = () => {
@@ -223,7 +246,8 @@ export default function HomePage() {
   };
 
   const featuredCampaigns = campaigns.filter(isFeatured);
-  const regularCampaigns = campaigns.filter(c => !isFeatured(c));
+  const flashCampaigns = campaigns.filter(c => !isFeatured(c) && isFlash(c));
+  const regularCampaigns = campaigns.filter(c => !isFeatured(c) && !isFlash(c));
 
   return (
     <div className="min-h-screen bg-[#030712]">
@@ -345,23 +369,55 @@ export default function HomePage() {
                 {locale === 'th' ? 'ดูทั้งหมด' : 'Show all deals'}
               </button>
             </div>
-          ) : regularCampaigns.length === 0 && featuredCampaigns.length > 0 ? (
-            <div className="text-center py-8">
-              <p className="text-white/30 text-sm">{locale === 'th' ? 'ดีลทั้งหมดอยู่ในส่วน Featured ด้านบน' : 'All deals are featured above'}</p>
-            </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {regularCampaigns.map(campaign => (
-                <div key={campaign.id} className="relative">
-                  {claimingId === campaign.id && (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 rounded-xl">
-                      <div className="w-6 h-6 border-2 border-[#06B6D4] border-t-transparent rounded-full animate-spin" />
-                    </div>
-                  )}
-                  <CampaignCard campaign={campaign} locale={locale} onClaim={handleClaim} />
+            <>
+              {/* Flash Deals */}
+              {flashCampaigns.length > 0 && (
+                <div style={{ marginBottom: 32 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, padding: '10px 16px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 12 }}>
+                    <span style={{ fontSize: 20 }}>⚡</span>
+                    <span style={{ fontWeight: 800, color: '#ef4444', fontSize: 15 }}>{locale === 'th' ? 'Flash Deals — หมดภายใน 24 ชม.' : 'Flash Deals — Ending in 24h'}</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {flashCampaigns.map(campaign => (
+                      <div key={campaign.id} className="relative" style={{ border: '1px solid rgba(239,68,68,0.4)', borderRadius: 16, overflow: 'visible' }}>
+                        <div style={{ position: 'absolute', top: -10, right: 12, background: '#ef4444', borderRadius: 8, padding: '2px 10px', fontSize: 11, fontWeight: 800, color: 'white', zIndex: 1 }}>
+                          ⚡ FLASH
+                        </div>
+                        <div style={{ padding: '10px 12px 6px', background: 'rgba(239,68,68,0.06)', borderBottom: '1px solid rgba(239,68,68,0.15)', borderRadius: '16px 16px 0 0', display: 'flex', justifyContent: 'center' }}>
+                          <Countdown endsAt={campaign.endsAt} />
+                        </div>
+                        {claimingId === campaign.id && (
+                          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 rounded-xl">
+                            <div className="w-6 h-6 border-2 border-[#06B6D4] border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        )}
+                        <CampaignCard campaign={campaign} locale={locale} onClaim={handleClaim} />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </div>
+              )}
+
+              {regularCampaigns.length === 0 && featuredCampaigns.length > 0 && flashCampaigns.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-white/30 text-sm">{locale === 'th' ? 'ดีลทั้งหมดอยู่ในส่วน Featured ด้านบน' : 'All deals are featured above'}</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {regularCampaigns.map(campaign => (
+                    <div key={campaign.id} className="relative">
+                      {claimingId === campaign.id && (
+                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 rounded-xl">
+                          <div className="w-6 h-6 border-2 border-[#06B6D4] border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                      <CampaignCard campaign={campaign} locale={locale} onClaim={handleClaim} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

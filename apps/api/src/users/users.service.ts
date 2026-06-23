@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Gender } from '@prisma/client';
 
@@ -74,6 +74,20 @@ export class UsersService {
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async redeemPoints(userId: string, campaignId: string) {
+    const POINTS_PER_CODE = 200;
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { points: true } });
+    if (!user) throw new NotFoundException('User not found');
+    if (user.points < POINTS_PER_CODE) {
+      throw new BadRequestException(`Need ${POINTS_PER_CODE} points. You have ${user.points}.`);
+    }
+    // Claim the code
+    const code = await this.claimCode(userId, campaignId);
+    // Deduct points
+    await this.prisma.user.update({ where: { id: userId }, data: { points: { decrement: POINTS_PER_CODE } } });
+    return { code, pointsSpent: POINTS_PER_CODE, remainingPoints: user.points - POINTS_PER_CODE };
   }
 
   async getReferralInfo(userId: string) {
