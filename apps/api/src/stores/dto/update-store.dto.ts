@@ -1,5 +1,6 @@
-import { IsString, IsOptional, IsUrl, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsUrl, IsEnum, IsNumber } from 'class-validator';
 import { Tariff, StoreStatus } from '@prisma/client';
+import { Type } from 'class-transformer';
 
 export class UpdateStoreDto {
   @IsString()
@@ -25,4 +26,22 @@ export class UpdateStoreDto {
   @IsEnum(StoreStatus)
   @IsOptional()
   status?: StoreStatus;
+
+  @IsNumber()
+  @IsOptional()
+  @Type(() => Number)
+  lat?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Type(() => Number)
+  lng?: number;
+
+  @IsString()
+  @IsOptional()
+  address?: string;
+
+  @IsString()
+  @IsOptional()
+  city?: string;
 }

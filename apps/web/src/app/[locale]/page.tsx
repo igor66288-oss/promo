@@ -25,7 +25,8 @@ interface Campaign {
   endsAt: string;
   promoted: boolean;
   promotedUntil?: string | null;
-  store: Store;
+  distanceKm?: number;
+  store: Store & { address?: string; city?: string };
   _count?: { promoCodes: number };
 }
 
@@ -43,6 +44,7 @@ interface ClaimedCode {
 
 const CATEGORIES: { key: string; icon: string; th: string; en: string }[] = [
   { key: 'ALL',           icon: '🔥', th: 'ทั้งหมด',    en: 'All' },
+  { key: 'NEARBY',        icon: '📍', th: 'ใกล้ฉัน',    en: 'Nearby' },
   { key: 'FOOD',          icon: '🍽️', th: 'อาหาร',      en: 'Food' },
   { key: 'BEAUTY',        icon: '💄', th: 'ความงาม',    en: 'Beauty' },
   { key: 'FASHION',       icon: '👗', th: 'แฟชั่น',     en: 'Fashion' },
@@ -149,7 +151,11 @@ function CampaignCard({ campaign, locale, onClaim }: { campaign: Campaign; local
       )}
       {campaign.description && <p className="text-white/40 text-xs mb-4 line-clamp-2">{campaign.description}</p>}
       <div className="mt-auto flex items-center justify-between gap-2">
-        <span className="text-white/40 text-xs">{daysLeft > 0 ? (locale === 'th' ? `เหลืออีก ${daysLeft} วัน` : `${daysLeft} days left`) : (locale === 'th' ? 'หมดอายุแล้ว' : 'Expired')}</span>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-white/40 text-xs">{daysLeft > 0 ? (locale === 'th' ? `เหลืออีก ${daysLeft} วัน` : `${daysLeft} days left`) : (locale === 'th' ? 'หมดอายุแล้ว' : 'Expired')}</span>
+          {campaign.distanceKm !== undefined && <span className="text-[#06B6D4] text-xs">📍 {campaign.distanceKm} km</span>}
+          {campaign.store.city && !campaign.distanceKm && <span className="text-white/30 text-xs">📍 {campaign.store.city}</span>}
+        </div>
         <Button size="sm" onClick={() => onClaim(campaign.id)}>{locale === 'th' ? 'รับโค้ด' : 'Get Code'}</Button>
       </div>
     </Card>
@@ -161,18 +167,43 @@ export default function HomePage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('ALL');
+  const [geoError, setGeoError] = useState('');
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [claimedCode, setClaimedCode] = useState<ClaimedCode | null>(null);
   const [claimError, setClaimError] = useState('');
 
-  useEffect(() => {
+  const loadCampaigns = (cat: string) => {
     setLoading(true);
-    const params = activeCategory !== 'ALL' ? `?category=${activeCategory}` : '';
-    api.get(`/campaigns${params}`)
-      .then(res => setCampaigns(Array.isArray(res.data) ? res.data : []))
-      .catch(() => setCampaigns([]))
-      .finally(() => setLoading(false));
-  }, [activeCategory]);
+    setGeoError('');
+    if (cat === 'NEARBY') {
+      if (!navigator.geolocation) {
+        setGeoError(locale === 'th' ? 'เบราว์เซอร์ไม่รองรับ GPS' : 'Browser does not support geolocation');
+        setLoading(false);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          api.get(`/campaigns/nearby?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}&radius=10`)
+            .then(res => setCampaigns(Array.isArray(res.data) ? res.data : []))
+            .catch(() => setCampaigns([]))
+            .finally(() => setLoading(false));
+        },
+        () => {
+          setGeoError(locale === 'th' ? 'ไม่สามารถเข้าถึงตำแหน่งได้ กรุณาอนุญาต GPS' : 'Location access denied. Please allow GPS.');
+          setCampaigns([]);
+          setLoading(false);
+        },
+      );
+    } else {
+      const params = cat !== 'ALL' ? `?category=${cat}` : '';
+      api.get(`/campaigns${params}`)
+        .then(res => setCampaigns(Array.isArray(res.data) ? res.data : []))
+        .catch(() => setCampaigns([]))
+        .finally(() => setLoading(false));
+    }
+  };
+
+  useEffect(() => { loadCampaigns(activeCategory); }, [activeCategory]);
 
   const handleClaim = async (campaignId: string) => {
     setClaimError('');
@@ -262,9 +293,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Error toast */}
+      {/* Error toasts */}
       {claimError && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 bg-red-500/20 border border-red-500/40 text-red-300 px-6 py-3 rounded-xl text-sm shadow-lg">{claimError}</div>
+      )}
+      {geoError && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 bg-amber-500/20 border border-amber-500/40 text-amber-300 px-6 py-3 rounded-xl text-sm shadow-lg max-w-xs text-center">📍 {geoError}</div>
       )}
 
       {/* Featured Deals */}

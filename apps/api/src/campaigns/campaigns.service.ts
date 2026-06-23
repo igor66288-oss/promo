@@ -67,6 +67,37 @@ export class CampaignsService {
     return campaign;
   }
 
+  async findNearby(lat: number, lng: number, radiusKm = 10, category?: string) {
+    await this.deactivateExpiredPromotions();
+    const where: any = { status: 'ACTIVE', store: { lat: { not: null as any }, lng: { not: null as any } } };
+    if (category && category !== 'ALL') where.category = category;
+
+    const campaigns = await (this.prisma.campaign.findMany as any)({
+      where,
+      include: {
+        store: { select: { id: true, name: true, logo: true, lat: true, lng: true, address: true, city: true } },
+        _count: { select: { promoCodes: true } },
+      },
+      orderBy: [{ promoted: 'desc' }, { createdAt: 'desc' }],
+    }) as any[];
+
+    // Haversine filter
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const R = 6371;
+    return (campaigns as any[])
+      .map(c => {
+        const sLat = c.store.lat as number;
+        const sLng = c.store.lng as number;
+        const dLat = toRad(sLat - lat);
+        const dLng = toRad(sLng - lng);
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat)) * Math.cos(toRad(sLat)) * Math.sin(dLng / 2) ** 2;
+        const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return { ...c, distanceKm: Math.round(dist * 10) / 10 };
+      })
+      .filter((c: any) => c.distanceKm <= radiusKm)
+      .sort((a: any, b: any) => a.distanceKm - b.distanceKm);
+  }
+
   async findByStore(storeId: string) {
     const store = await this.prisma.store.findUnique({ where: { id: storeId } });
     if (!store) throw new NotFoundException('Store not found');

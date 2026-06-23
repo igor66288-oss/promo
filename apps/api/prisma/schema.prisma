@@ -51,6 +51,10 @@ model Store {
   tariff      Tariff      @default(CPA)
   status      StoreStatus @default(PENDING)
   apiKey      String      @unique @default(cuid())
+  lat         Float?
+  lng         Float?
+  address     String?
+  city        String?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   campaigns   Campaign[]

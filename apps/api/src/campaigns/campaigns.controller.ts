@@ -45,6 +45,16 @@ export class CampaignsController {
     return this.campaignsService.update(id, req.user.id, req.user.role, dto);
   }
 
+  @Get('campaigns/nearby')
+  findNearby(
+    @Query('lat') lat: string,
+    @Query('lng') lng: string,
+    @Query('radius') radius?: string,
+    @Query('category') category?: string,
+  ) {
+    return this.campaignsService.findNearby(+lat, +lng, radius ? +radius : 10, category);
+  }
+
   @Get('stores/:storeId/campaigns')
   findByStore(@Param('storeId') storeId: string) {
     return this.campaignsService.findByStore(storeId);
