@@ -55,6 +55,7 @@ model Store {
   tariff      Tariff      @default(CPA)
   status      StoreStatus @default(PENDING)
   apiKey      String      @unique @default(cuid())
+  webhookUrl  String?
   lat         Float?
   lng         Float?
   address     String?

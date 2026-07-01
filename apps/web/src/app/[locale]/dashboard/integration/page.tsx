@@ -1,356 +1,364 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import api from '@/lib/api';
+import { useRouter, useParams } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
-import { copyToClipboard } from '@/lib/clipboard';
+import api from '@/lib/api';
+
+const S = {
+  page: { display: 'flex', minHeight: '100vh', background: '#030712', color: 'white', fontFamily: 'sans-serif' } as const,
+  main: { flex: 1, padding: '32px 40px', overflowY: 'auto' as const },
+  h1: { fontSize: 28, fontWeight: 800, margin: '0 0 4px' },
+  sub: { color: 'rgba(255,255,255,0.4)', fontSize: 14, margin: '0 0 32px' },
+  card: { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 24, marginBottom: 24 },
+  cardTitle: { fontSize: 16, fontWeight: 700, margin: '0 0 4px' },
+  cardSub: { fontSize: 13, color: 'rgba(255,255,255,0.4)', margin: '0 0 20px' },
+  label: { display: 'block', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', textTransform: 'uppercase' as const, marginBottom: 6 },
+  input: { width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '11px 14px', color: 'white', fontSize: 14, boxSizing: 'border-box' as const, outline: 'none' },
+  mono: { fontFamily: 'monospace', fontSize: 13, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '10px 14px', color: '#67E8F9', wordBreak: 'break-all' as const },
+  row: { display: 'flex', gap: 10, alignItems: 'center' },
+  sep: { height: 1, background: 'rgba(255,255,255,0.06)', margin: '20px 0' },
+  code: { display: 'block', background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '16px 20px', fontFamily: 'monospace', fontSize: 12, color: '#e6edf3', overflowX: 'auto' as const, whiteSpace: 'pre' as const, lineHeight: 1.6 },
+  btn: (color = '#06B6D4') => ({ padding: '9px 18px', background: color, border: 'none', borderRadius: 8, color: 'white', fontSize: 13, fontWeight: 700, cursor: 'pointer' } as const),
+  btnOutline: { padding: '9px 18px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: 600, cursor: 'pointer' } as const,
+  tag: (m: string) => ({ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, background: m === 'POST' ? 'rgba(249,115,22,0.2)' : 'rgba(6,182,212,0.2)', color: m === 'POST' ? '#FB923C' : '#67E8F9' } as const),
+  badge: (ok: boolean) => ({ display: 'inline-block', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: ok ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', color: ok ? '#34d399' : '#f87171' } as const),
+};
 
 export default function IntegrationPage() {
+  const params = useParams();
+  const locale = params.locale as string;
+  const router = useRouter();
+
   const [apiKey, setApiKey] = useState('');
-  const [storeId, setStoreId] = useState('');
-  const [copied, setCopied] = useState<string | null>(null);
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [webhookInput, setWebhookInput] = useState('');
+  const [showKey, setShowKey] = useState(false);
+  const [keyCopied, setKeyCopied] = useState(false);
   const [rotating, setRotating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; status?: number; error?: string } | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'verify' | 'webhook' | 'shopify'>('verify');
 
   useEffect(() => {
-    api.get('/my/api-key').then((r) => {
-      setApiKey(r.data.apiKey);
-      setStoreId(r.data.storeId);
-    }).catch(() => {
-      // Store may not exist yet
-    });
+    const stored = localStorage.getItem('user');
+    if (!stored) { router.push(`/${locale}/auth/login`); return; }
+    const u = JSON.parse(stored);
+    if (u.role === 'CUSTOMER') { router.push(`/${locale}/account`); return; }
+
+    api.get('/my/api-key').then(r => {
+      setApiKey(r.data.apiKey || '');
+      setWebhookUrl(r.data.webhookUrl || '');
+      setWebhookInput(r.data.webhookUrl || '');
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, []);
 
-  const copy = (text: string, key: string) => {
-    copyToClipboard(text);
-    setCopied(key);
-    setTimeout(() => setCopied(null), 2000);
+  const copyKey = () => {
+    navigator.clipboard?.writeText(apiKey).catch(() => {});
+    setKeyCopied(true); setTimeout(() => setKeyCopied(false), 2000);
   };
 
-  const rotate = async () => {
-    if (!confirm('Rotate API key? Old key will stop working immediately.')) return;
+  const rotateKey = async () => {
+    if (!confirm(locale === 'th' ? 'สร้าง API Key ใหม่? Key เดิมจะหยุดทำงานทันที' : 'Generate a new API key? The old key will stop working immediately.')) return;
     setRotating(true);
     try {
       const r = await api.post('/my/api-key/rotate');
       setApiKey(r.data.apiKey);
-    } finally {
-      setRotating(false);
-    }
+    } catch {}
+    setRotating(false);
   };
 
-  const snippet = `<script src="http://localhost:3001/widget/promo-widget.js"
-  data-store-id="${storeId}"
-  data-api-url="http://localhost:3001/api"
-  data-platform-url="http://localhost:3000">
-</script>`;
+  const saveWebhook = async () => {
+    setSaving(true); setSaved(false); setTestResult(null);
+    try {
+      const r = await api.patch('/my/webhook-url', { webhookUrl: webhookInput });
+      setWebhookUrl(r.data.webhookUrl || '');
+      setSaved(true); setTimeout(() => setSaved(false), 3000);
+    } catch {}
+    setSaving(false);
+  };
 
-  const webhookExample = JSON.stringify(
-    {
-      storeApiKey: apiKey || 'YOUR_API_KEY',
-      orderId: 'ORD-12345',
-      promoCode: 'DEMO-AB12-CD34',
-      orderAmount: 150000,
-    },
-    null,
-    2,
+  const testWebhook = async () => {
+    setTesting(true); setTestResult(null);
+    try {
+      const r = await api.post('/my/webhook-test');
+      setTestResult(r.data);
+    } catch (e: any) {
+      setTestResult({ success: false, error: e?.response?.data?.message || 'Error' });
+    }
+    setTesting(false);
+  };
+
+  const API_BASE = typeof window !== 'undefined' ? `${window.location.origin}/api` : 'https://your-domain.com/api';
+  const KEY = apiKey || 'YOUR_API_KEY';
+
+  const curlVerify = `curl -X POST ${API_BASE}/public/verify-code \\
+  -H "Content-Type: application/json" \\
+  -H "X-Store-Key: ${KEY}" \\
+  -d '{"code": "PROMO-XXXX-YYYY", "orderId": "ORDER-001"}'`;
+
+  const nodeVerify = `const res = await fetch('${API_BASE}/public/verify-code', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-Store-Key': process.env.PROMO_STORE_KEY,
+  },
+  body: JSON.stringify({ code: promoCode, orderId: order.id }),
+});
+const result = await res.json();
+
+if (result.valid) {
+  // type: 'PERCENTAGE' | 'FIXED', value: number
+  const discount = result.discount.type === 'PERCENTAGE'
+    ? order.total * result.discount.value / 100
+    : result.discount.value;
+  order.applyDiscount(discount);
+} else {
+  // error: 'code_not_found' | 'already_used' | 'expired' | 'wrong_store'
+  throw new Error('Promo code invalid: ' + result.error);
+}`;
+
+  const phpVerify = `$res = wp_remote_post('${API_BASE}/public/verify-code', [
+  'headers' => ['Content-Type' => 'application/json', 'X-Store-Key' => PROMO_KEY],
+  'body'    => json_encode(['code' => $code, 'orderId' => $order_id]),
+]);
+$data = json_decode(wp_remote_retrieve_body($res), true);
+if ($data['valid']) apply_order_discount($order, $data['discount']);`;
+
+  const webhookPayload = `{
+  "event": "code.redeemed",
+  "valid": true,
+  "code": "PROMO-XXXX-YYYY",
+  "orderId": "ORDER-001",
+  "discount": { "type": "PERCENTAGE", "value": 20 },
+  "campaign": "Summer Sale 20% Off",
+  "store": "Demo Store",
+  "redeemedAt": "2026-07-01T10:00:00.000Z"
+}`;
+
+  const expressReceiver = `app.post('/webhooks/promo', express.json(), (req, res) => {
+  const { event, code, orderId, discount } = req.body;
+  if (event === 'code.redeemed') {
+    console.log(\`Code \${code} redeemed for order \${orderId}\`);
+    // discount.type: 'PERCENTAGE' | 'FIXED', discount.value: number
+    updateOrder(orderId, discount);
+  }
+  res.sendStatus(200); // always return 200
+});`;
+
+  const shopifyCode = `// pages/api/apply-promo.js (Next.js / Shopify App)
+export default async function handler(req, res) {
+  const { code, orderId } = req.body;
+  const result = await fetch('${API_BASE}/public/verify-code', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Store-Key': process.env.PROMO_STORE_KEY },
+    body: JSON.stringify({ code, orderId }),
+  }).then(r => r.json());
+
+  if (result.valid) {
+    // Use Shopify Admin API to apply discount via draft order
+    const discountAmount = result.discount.type === 'PERCENTAGE'
+      ? orderTotal * result.discount.value / 100
+      : result.discount.value;
+    await applyShopifyDiscount(orderId, discountAmount);
+    res.json({ success: true, discount: result.discount });
+  } else {
+    res.status(400).json({ error: result.error });
+  }
+}`;
+
+  if (loading) return (
+    <div style={{ minHeight: '100vh', background: '#030712', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.3)' }}>
+      Loading...
+    </div>
   );
 
-  const shopifyLiquid = `{% comment %} Promo Widget — paste before </body> {% endcomment %}
-<script src="http://localhost:3001/widget/promo-widget.js"
-  data-store-id="${storeId}"
-  data-api-url="http://localhost:3001/api"
-  data-platform-url="http://localhost:3000">
-</script>`;
-
   return (
-    <div className="flex min-h-screen" style={{ background: '#030712', color: 'white' }}>
+    <div style={S.page}>
       <Sidebar />
-      <main className="flex-1 p-4 md:p-8 pb-20 md:pb-8 overflow-auto">
-        <h1 className="text-3xl font-bold mb-2">Integration</h1>
-        <p className="text-gray-400 mb-8">Connect your store to the Promo platform</p>
+      <main style={S.main}>
+        <h1 style={S.h1}>{locale === 'th' ? '⚙ การเชื่อมต่อ API' : '⚙ API Integration'}</h1>
+        <p style={S.sub}>{locale === 'th' ? 'เชื่อมต่อร้านค้าของคุณกับ Promo Platform เพื่อรับ/ตรวจสอบโค้ดอัตโนมัติ' : 'Connect your store to Promo Platform for automatic code verification and webhooks'}</p>
 
         {/* API Key */}
-        <section
-          className="mb-8 p-6 rounded-xl"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
-        >
-          <h2 className="text-xl font-semibold mb-4">API Key</h2>
-          <div className="flex items-center gap-3 flex-wrap">
-            <code
-              className="flex-1 p-3 rounded-lg text-sm font-mono min-w-0 break-all"
-              style={{ background: 'rgba(0,0,0,0.3)' }}
-            >
-              {apiKey || 'Loading...'}
-            </code>
-            <button
-              onClick={() => copy(apiKey, 'key')}
-              className="px-4 py-2 rounded-lg text-sm font-medium flex-shrink-0"
-              style={{ background: copied === 'key' ? '#059669' : '#06B6D4' }}
-            >
-              {copied === 'key' ? 'Copied!' : 'Copy'}
-            </button>
-            <button
-              onClick={rotate}
-              disabled={rotating}
-              className="px-4 py-2 rounded-lg text-sm font-medium flex-shrink-0"
-              style={{
-                background: 'rgba(239,68,68,0.2)',
-                border: '1px solid rgba(239,68,68,0.4)',
-                color: '#f87171',
-              }}
-            >
-              {rotating ? '...' : 'Rotate'}
+        <div style={S.card}>
+          <p style={S.cardTitle}>🔑 API Key</p>
+          <p style={S.cardSub}>{locale === 'th' ? 'ส่ง Key นี้ใน header X-Store-Key ทุกครั้งที่เรียก API' : 'Send this key in the X-Store-Key header on every API call'}</p>
+          <div style={{ ...S.row, marginBottom: 12 }}>
+            <div style={{ ...S.mono, flex: 1 }}>
+              {showKey ? apiKey : '•'.repeat(Math.min(apiKey.length, 20)) + '...'}
+            </div>
+            <button style={S.btnOutline} onClick={() => setShowKey(v => !v)}>{showKey ? '🙈' : '👁'}</button>
+            <button style={S.btn(keyCopied ? '#10B981' : '#06B6D4')} onClick={copyKey}>
+              {keyCopied ? '✓' : locale === 'th' ? 'คัดลอก' : 'Copy'}
             </button>
           </div>
-          <p className="text-xs text-gray-500 mt-2">
-            Use this key in webhook calls to authenticate your store.
+          <button style={{ ...S.btnOutline, color: '#F97316', borderColor: 'rgba(249,115,22,0.3)' } as const} onClick={rotateKey} disabled={rotating}>
+            {rotating ? '...' : (locale === 'th' ? '🔄 สร้าง Key ใหม่' : '🔄 Rotate Key')}
+          </button>
+          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 8, marginBottom: 0 }}>
+            {locale === 'th' ? '⚠️ การสร้าง Key ใหม่จะทำให้ Key เดิมหยุดทำงานทันที' : '⚠️ Rotating immediately invalidates the current key'}
           </p>
-        </section>
+        </div>
 
-        {/* JS Widget */}
-        <section
-          className="mb-8 p-6 rounded-xl"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
-        >
-          <h2 className="text-xl font-semibold mb-2">JS Widget</h2>
-          <p className="text-gray-400 text-sm mb-4">
-            Add one line before <code>&lt;/body&gt;</code> on your website to show a floating deals button.
-          </p>
-          <div className="relative">
-            <pre
-              className="p-4 rounded-lg text-xs overflow-x-auto"
-              style={{ background: 'rgba(0,0,0,0.4)', color: '#67E8F9' }}
-            >
-              {snippet}
-            </pre>
-            <button
-              onClick={() => copy(snippet, 'snippet')}
-              className="absolute top-3 right-3 px-3 py-1 rounded text-xs"
-              style={{ background: copied === 'snippet' ? '#059669' : '#06B6D4' }}
-            >
-              {copied === 'snippet' ? 'Copied!' : 'Copy'}
+        {/* Webhook */}
+        <div style={S.card}>
+          <p style={S.cardTitle}>🔔 {locale === 'th' ? 'Webhook URL' : 'Outbound Webhook URL'}</p>
+          <p style={S.cardSub}>{locale === 'th' ? 'เราจะ POST ไปที่ URL นี้ทุกครั้งที่ลูกค้าใช้โค้ด' : 'We\'ll POST to this URL whenever a customer redeems a code'}</p>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+            <input
+              style={{ ...S.input, flex: 1 }}
+              placeholder="https://your-store.com/webhooks/promo"
+              value={webhookInput}
+              onChange={e => setWebhookInput(e.target.value)}
+            />
+            <button style={S.btn(saved ? '#10B981' : '#06B6D4')} onClick={saveWebhook} disabled={saving}>
+              {saving ? '...' : saved ? `✓ ${locale === 'th' ? 'บันทึกแล้ว' : 'Saved'}` : (locale === 'th' ? 'บันทึก' : 'Save')}
             </button>
           </div>
-        </section>
+          {webhookUrl && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <button style={S.btnOutline} onClick={testWebhook} disabled={testing}>
+                {testing ? '...' : (locale === 'th' ? '🧪 ทดสอบ' : '🧪 Send Test')}
+              </button>
+              {testResult && (
+                <span style={S.badge(testResult.success)}>
+                  {testResult.success ? `✓ ${testResult.status ?? 200} OK` : `✗ ${testResult.error || 'Failed'}`}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
 
-        {/* Shopify */}
-        <section
-          className="mb-8 p-6 rounded-xl"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
-        >
-          <h2 className="text-xl font-semibold mb-4">Shopify Integration</h2>
-          <div className="space-y-6 text-sm text-gray-300">
-            {/* Step 1 */}
-            <div className="flex items-start gap-3">
-              <span
-                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
-                style={{ background: '#06B6D4' }}
-              >
-                1
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="font-medium text-white mb-1">Add widget to your theme</p>
-                <p className="text-gray-400 mb-2">
-                  In Shopify Admin &rarr; Online Store &rarr; Themes &rarr; Edit code &rarr;{' '}
-                  <code>theme.liquid</code>, paste before <code>&lt;/body&gt;</code>:
-                </p>
-                <div className="relative">
-                  <pre
-                    className="p-3 rounded text-xs overflow-x-auto"
-                    style={{ background: 'rgba(0,0,0,0.4)', color: '#67E8F9' }}
-                  >
-                    {shopifyLiquid}
-                  </pre>
-                  <button
-                    onClick={() => copy(shopifyLiquid, 'shopify')}
-                    className="absolute top-2 right-2 px-2 py-1 rounded text-xs"
-                    style={{ background: copied === 'shopify' ? '#059669' : '#06B6D4' }}
-                  >
-                    {copied === 'shopify' ? 'Copied!' : 'Copy'}
-                  </button>
+        {/* Guides */}
+        <div style={S.card}>
+          <p style={S.cardTitle}>📖 {locale === 'th' ? 'คู่มือการเชื่อมต่อ' : 'Integration Guide'}</p>
+          <p style={S.cardSub}>{locale === 'th' ? 'Base URL:' : 'Base URL:'} <code style={{ color: '#67E8F9' }}>{API_BASE}</code></p>
+
+          <div style={{ display: 'flex', gap: 8, marginBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 0 }}>
+            {([
+              { key: 'verify', label: locale === 'th' ? '✅ ตรวจสอบโค้ด' : '✅ Verify Code' },
+              { key: 'webhook', label: '🔔 Webhook' },
+              { key: 'shopify', label: '🛒 Shopify' },
+            ] as const).map(tab => (
+              <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
+                padding: '8px 16px', borderRadius: '8px 8px 0 0', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                background: activeTab === tab.key ? 'rgba(6,182,212,0.15)' : 'transparent',
+                color: activeTab === tab.key ? '#67E8F9' : 'rgba(255,255,255,0.4)',
+                borderBottom: activeTab === tab.key ? '2px solid #06B6D4' : '2px solid transparent',
+              }}>{tab.label}</button>
+            ))}
+          </div>
+
+          {activeTab === 'verify' && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <span style={S.tag('POST')}>POST</span>
+                <code style={{ fontSize: 13, color: '#67E8F9' }}>/api/public/verify-code</code>
+              </div>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', margin: '0 0 16px' }}>
+                {locale === 'th'
+                  ? 'ตรวจสอบและใช้โค้ดในคราวเดียว — ไม่ต้อง login, ใช้แค่ X-Store-Key. เรียกใช้ตอน checkout.'
+                  : 'Verifies AND redeems the code in one call. No JWT needed — just X-Store-Key. Call at checkout before charging.'}
+              </p>
+
+              <p style={S.label}>Request / Response</p>
+              <pre style={S.code}>{`// Request
+POST /api/public/verify-code
+X-Store-Key: ${KEY}
+Content-Type: application/json
+
+{ "code": "PROMO-XXXX-YYYY", "orderId": "ORDER-001" }
+
+// ✅ Success
+{ "valid": true, "code": "PROMO-XXXX-YYYY", "orderId": "ORDER-001",
+  "discount": { "type": "PERCENTAGE", "value": 20 },
+  "campaign": "Summer Sale 20% Off", "store": "Demo Store",
+  "redeemedAt": "2026-07-01T10:00:00.000Z" }
+
+// ❌ Error (HTTP 200 — always check result.valid)
+{ "valid": false, "error": "code_not_found" }
+// error codes: code_not_found | already_used | expired | wrong_store`}</pre>
+
+              <div style={S.sep} />
+              <p style={S.label}>curl</p>
+              <pre style={S.code}>{curlVerify}</pre>
+
+              <div style={S.sep} />
+              <p style={S.label}>Node.js / TypeScript</p>
+              <pre style={S.code}>{nodeVerify}</pre>
+
+              <div style={S.sep} />
+              <p style={S.label}>PHP / WordPress / WooCommerce</p>
+              <pre style={S.code}>{phpVerify}</pre>
+            </div>
+          )}
+
+          {activeTab === 'webhook' && (
+            <div>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', margin: '0 0 16px' }}>
+                {locale === 'th'
+                  ? 'เราส่ง POST ไปที่ Webhook URL ของคุณทุกครั้งที่โค้ดถูกใช้ผ่านแพลตฟอร์มหรือ verify API'
+                  : 'We POST to your Webhook URL on every code redemption — via platform QR scan or /public/verify-code.'}
+              </p>
+              <div style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: 13, color: '#FB923C' }}>
+                <strong>Header sent:</strong> <code>X-Promo-Event: code.redeemed</code>
+              </div>
+              <p style={S.label}>Payload Example</p>
+              <pre style={S.code}>{webhookPayload}</pre>
+              <div style={S.sep} />
+              <p style={S.label}>Express.js receiver</p>
+              <pre style={S.code}>{expressReceiver}</pre>
+            </div>
+          )}
+
+          {activeTab === 'shopify' && (
+            <div>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', margin: '0 0 20px' }}>
+                {locale === 'th' ? 'เชื่อมต่อ Shopify ผ่าน Custom App หรือ App Extension' : 'Integrate with Shopify via Custom App or Checkout Extension.'}
+              </p>
+              {[
+                { n: 1, t: locale === 'th' ? 'เพิ่มช่องกรอกโค้ดใน cart หรือ checkout' : 'Add promo code input in cart or checkout' },
+                { n: 2, t: locale === 'th' ? 'สร้าง API route ที่เรียก /api/public/verify-code' : 'Create API route that calls /api/public/verify-code' },
+                { n: 3, t: locale === 'th' ? 'ใช้ Shopify Draft Orders API เพื่อลดราคา' : 'Use Shopify Draft Orders API to apply discount' },
+                { n: 4, t: locale === 'th' ? 'ตั้ง Webhook URL เพื่อรับ events ทุก redemption' : 'Configure Webhook URL above to receive redemption events' },
+              ].map(s => (
+                <div key={s.n} style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(6,182,212,0.15)', border: '1px solid rgba(6,182,212,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#67E8F9', flexShrink: 0 }}>{s.n}</div>
+                  <p style={{ margin: '4px 0 0', fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>{s.t}</p>
                 </div>
+              ))}
+              <div style={S.sep} />
+              <p style={S.label}>Next.js API Route (Shopify App)</p>
+              <pre style={S.code}>{shopifyCode}</pre>
+              <div style={{ marginTop: 16, background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.2)', borderRadius: 10, padding: '14px 18px', fontSize: 13, color: '#67E8F9' }}>
+                💡 {locale === 'th' ? 'ต้องการ Shopify Plugin สำเร็จรูป? ติดต่อทีมเรา' : 'Need a pre-built Shopify App? Contact our team.'}
               </div>
             </div>
+          )}
+        </div>
 
-            {/* Step 2 */}
-            <div className="flex items-start gap-3">
-              <span
-                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
-                style={{ background: '#06B6D4' }}
-              >
-                2
-              </span>
-              <div>
-                <p className="font-medium text-white mb-1">Set up order webhook</p>
-                <p className="text-gray-400">
-                  In Shopify Admin &rarr; Settings &rarr; Notifications &rarr; Webhooks, add:
-                </p>
-                <ul className="mt-2 space-y-1 text-gray-400">
-                  <li>
-                    &bull; Event: <strong className="text-white">Order payment</strong>
-                  </li>
-                  <li>
-                    &bull; URL:{' '}
-                    <code className="text-cyan-400">
-                      http://localhost:3001/api/webhooks/order-paid
-                    </code>
-                  </li>
-                  <li>
-                    &bull; Format: <strong className="text-white">JSON</strong>
-                  </li>
-                </ul>
-                <p className="text-gray-500 text-xs mt-2">
-                  Note: Shopify webhooks have their own format. For production use the Shopify app
-                  connector.
-                </p>
+        {/* Endpoints table */}
+        <div style={S.card}>
+          <p style={{ ...S.cardTitle, marginBottom: 16 }}>📋 {locale === 'th' ? 'สรุป API Endpoints' : 'API Endpoints Summary'}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {[
+              { m: 'POST', p: '/public/verify-code', a: 'X-Store-Key header', d: locale === 'th' ? 'ตรวจสอบและใช้โค้ด (checkout)' : 'Verify & redeem code at checkout' },
+              { m: 'POST', p: '/webhooks/order-paid', a: 'body.storeApiKey', d: locale === 'th' ? 'แจ้งออเดอร์สำเร็จ → CONVERTED' : 'Report paid order → marks code CONVERTED' },
+            ].map(ep => (
+              <div key={ep.p} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, flexWrap: 'wrap' }}>
+                <span style={S.tag(ep.m)}>{ep.m}</span>
+                <code style={{ fontSize: 12, color: '#67E8F9' }}>{ep.p}</code>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginLeft: 'auto' }}>{ep.a}</span>
+                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{ep.d}</span>
               </div>
-            </div>
+            ))}
           </div>
-        </section>
-
-        {/* Partner Roulette */}
-        <section
-          className="mb-8 p-6 rounded-xl"
-          style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.25)' }}
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-2xl">🎡</span>
-            <h2 className="text-xl font-semibold">Partner Post-Payment Roulette</h2>
-          </div>
-          <p className="text-gray-400 text-sm mb-6">
-            Integrate with Grab, Lazada, or any partner platform. After a customer pays, call our API
-            to get a roulette widget URL — show it as a popup and the wheel auto-spins to a random merchant promo.
-          </p>
-
-          <div className="space-y-6">
-            {/* Step 1 */}
-            <div className="flex items-start gap-3">
-              <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5" style={{ background: '#8B5CF6' }}>1</span>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-white mb-1">Enable your campaign for Partner Roulette</p>
-                <p className="text-gray-400 text-sm">
-                  Go to <strong className="text-white">Campaigns</strong> → click the{' '}
-                  <span style={{ color: '#a78bfa' }}>🎡 Roulette</span> button on any active campaign to opt-in.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 2 */}
-            <div className="flex items-start gap-3">
-              <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5" style={{ background: '#8B5CF6' }}>2</span>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-white mb-2">Call the spin API after payment</p>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="px-2 py-0.5 rounded text-xs font-bold" style={{ background: '#059669' }}>POST</span>
-                  <code className="text-xs text-cyan-400 break-all">http://5.223.88.83/api/partner/spin</code>
-                </div>
-                <div className="relative">
-                  <pre className="p-3 rounded text-xs overflow-x-auto" style={{ background: 'rgba(0,0,0,0.4)', color: '#c4b5fd' }}>{`// Header: X-Partner-Key: grab-demo-secret-key-2026
-{
-  "transactionId": "grab-txn-unique-id",
-  "customerRef": "grab-user-id"
-}
-
-// Response:
-{
-  "id": "spin_abc123",
-  "widgetUrl": "http://5.223.88.83/th/partner-spin/spin_abc123",
-  "status": "COMPLETED"
-}`}</pre>
-                  <button
-                    onClick={() => copy(`fetch('http://5.223.88.83/api/partner/spin', {\n  method: 'POST',\n  headers: {\n    'X-Partner-Key': 'grab-demo-secret-key-2026',\n    'Content-Type': 'application/json'\n  },\n  body: JSON.stringify({ transactionId: order.id, customerRef: user.id })\n})\n.then(r => r.json())\n.then(({ widgetUrl }) => showPopup(widgetUrl));`, 'partner-api')}
-                    className="absolute top-2 right-2 px-2 py-1 rounded text-xs"
-                    style={{ background: copied === 'partner-api' ? '#059669' : '#8B5CF6' }}
-                  >
-                    {copied === 'partner-api' ? 'Copied!' : 'Copy'}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="flex items-start gap-3">
-              <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5" style={{ background: '#8B5CF6' }}>3</span>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-white mb-2">Show the widget as a popup</p>
-                <div className="relative">
-                  <pre className="p-3 rounded text-xs overflow-x-auto" style={{ background: 'rgba(0,0,0,0.4)', color: '#c4b5fd' }}>{`function showPromoPopup(widgetUrl) {
-  const overlay = document.createElement('div');
-  overlay.style.cssText = \`
-    position:fixed; inset:0; z-index:9999;
-    background:rgba(0,0,0,0.7);
-    display:flex; align-items:center; justify-content:center;
-  \`;
-  const iframe = document.createElement('iframe');
-  iframe.src = widgetUrl;
-  iframe.style.cssText = \`
-    width:360px; height:580px;
-    border:none; border-radius:20px;
-  \`;
-  overlay.appendChild(iframe);
-  overlay.onclick = (e) => { if(e.target===overlay) overlay.remove(); };
-  document.body.appendChild(overlay);
-}`}</pre>
-                  <button
-                    onClick={() => copy(`function showPromoPopup(widgetUrl) {\n  const overlay = document.createElement('div');\n  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';\n  const iframe = document.createElement('iframe');\n  iframe.src = widgetUrl;\n  iframe.style.cssText = 'width:360px;height:580px;border:none;border-radius:20px;';\n  overlay.appendChild(iframe);\n  overlay.onclick = (e) => { if(e.target===overlay) overlay.remove(); };\n  document.body.appendChild(overlay);\n}`, 'popup-code')}
-                    className="absolute top-2 right-2 px-2 py-1 rounded text-xs"
-                    style={{ background: copied === 'popup-code' ? '#059669' : '#8B5CF6' }}
-                  >
-                    {copied === 'popup-code' ? 'Copied!' : 'Copy'}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Demo link */}
-            <div className="p-4 rounded-lg" style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)' }}>
-              <p className="text-sm text-purple-300 font-medium mb-1">🧪 Demo Partner Key (Grab)</p>
-              <code className="text-xs text-purple-200">grab-demo-secret-key-2026</code>
-              <p className="text-xs text-gray-500 mt-2">Use this key to test the spin API. Replace with your real key in production.</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Webhook docs */}
-        <section
-          className="p-6 rounded-xl"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
-        >
-          <h2 className="text-xl font-semibold mb-2">Webhook: order.paid</h2>
-          <p className="text-gray-400 text-sm mb-4">
-            Call this when a customer completes a purchase. Marks the promo code as converted and
-            records the sale.
-          </p>
-          <div className="flex items-center gap-2 mb-3">
-            <span
-              className="px-2 py-0.5 rounded text-xs font-bold"
-              style={{ background: '#059669' }}
-            >
-              POST
-            </span>
-            <code className="text-sm text-cyan-400">
-              http://localhost:3001/api/webhooks/order-paid
-            </code>
-          </div>
-          <div className="relative">
-            <pre
-              className="p-4 rounded-lg text-xs overflow-x-auto"
-              style={{ background: 'rgba(0,0,0,0.4)', color: '#86efac' }}
-            >
-              {webhookExample}
-            </pre>
-            <button
-              onClick={() => copy(webhookExample, 'webhook')}
-              className="absolute top-3 right-3 px-3 py-1 rounded text-xs"
-              style={{ background: copied === 'webhook' ? '#059669' : '#06B6D4' }}
-            >
-              {copied === 'webhook' ? 'Copied!' : 'Copy'}
-            </button>
-          </div>
-          <p className="text-xs text-gray-500 mt-2">
-            <code>orderAmount</code> in satangs (1 THB = 100 satangs).{' '}
-            <code>promoCode</code> is optional.
-          </p>
-        </section>
+        </div>
       </main>
     </div>
   );

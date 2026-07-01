@@ -40,7 +40,7 @@ export default function ProfilePage() {
         email: d.email || '',
       });
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, []);
 
   const save = async () => {
