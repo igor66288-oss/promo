@@ -48,6 +48,8 @@ export class WebhooksService {
 
   // Public code verification endpoint — used by store checkout (no JWT required)
   async verifyCodePublic(apiKey: string, code: string, orderId?: string) {
+    if (!apiKey) throw new UnauthorizedException('Missing X-Store-Key header');
+    if (!code) throw new BadRequestException('Missing code');
     const store = await this.prisma.store.findUnique({ where: { apiKey } });
     if (!store) throw new UnauthorizedException('Invalid X-Store-Key');
 
