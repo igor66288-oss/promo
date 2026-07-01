@@ -22,6 +22,9 @@ prisma/migrations/*.sql
 *.log
 logs/
 
+# DB backups
+backups/
+
 # OS
 .DS_Store
 Thumbs.db
